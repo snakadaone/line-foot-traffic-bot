@@ -24,8 +24,21 @@ app.post('/webhook', async (req, res) => {
 
   // 使用者傳送位置
   if (event.message?.type === 'location') {
-    await replyText(event.replyToken, `✅ 已收到您的位置！請繼續輸入「設定營業時間」`);
+    const { latitude, longitude } = event.message;
+  
+    // 🔁 Reverse geocode to get city
+    const city = await reverseGeocode(latitude, longitude);
+  
+    // ✅ Store city name in userState
+    userState[userId] = {
+      ...userState[userId],
+      location: { lat: latitude, lng: longitude },
+      city
+    };
+  
+    await replyText(event.replyToken, `✅ 已收到您的位置！\n📍 您所在的城市是：${city}\n請繼續輸入「設定營業時間」`);
   }
+  
 
   // 使用者輸入：設定營業時間
   else if (text === '設定營業時間') {
@@ -107,6 +120,35 @@ async function replyText(replyToken, text) {
   };
   await axios.post(url, body, { headers });
 }
+const { Client } = require('@googlemaps/google-maps-services-js');
+const googleClient = new Client({});
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await googleClient.reverseGeocode({
+      params: {
+        latlng: { lat, lng },
+        key: process.env.GOOGLE_MAPS_API_KEY,
+        language: 'zh-TW'
+      },
+    });
+
+    const results = res.data.results;
+    for (const result of results) {
+      for (const comp of result.address_components) {
+        if (comp.types.includes('administrative_area_level_1') || comp.types.includes('administrative_area_level_2')) {
+          return comp.long_name;
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('❗ reverseGeocode 錯誤:', error.response?.data || error);
+    return null;
+  }
+}
+
 
 async function sendTimeQuickReply(replyToken, promptText, step = 'start', range = 'first') {
     try {
