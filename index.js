@@ -112,7 +112,7 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
     try {
       const hours =
         range === 'first'
-          ? Array.from({ length: 13 }, (_, i) => i) // 0 ~ 12
+          ? Array.from({ length: 12 }, (_, i) => i) // 0 ~ 11
           : Array.from({ length: 11 }, (_, i) => i + 13); // 13 ~ 23
   
       const quickReplyItems = hours.map(hour => {
