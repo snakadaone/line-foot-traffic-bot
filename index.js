@@ -45,7 +45,7 @@ app.post('/webhook', async (req, res) => {
     } else if (userState[userId]?.step === 'end') {
       userState[userId].end = label;
       const { start, end } = userState[userId];
-      await replyText(event.replyToken, `✅ 營業時間已設定為：\n${start} ~ ${end}`);
+      await replyConfirmTime(event.replyToken, start, end);
       delete userState[userId];
     }
   }
@@ -58,7 +58,29 @@ app.post('/webhook', async (req, res) => {
 1️⃣ 傳送您的地點（使用 LINE「位置訊息」功能）
 2️⃣ 輸入「設定營業時間」並選擇時間`);
   }
+  else if (text === '確認營業時間') {
+    const { start, end } = userState[userId] || {};
+    if (start && end) {
+      await replyText(event.replyToken, `✅ 營業時間確認完成！\n${start} ~ ${end}`);
+      delete userState[userId];
+    } else {
+      await replyText(event.replyToken, '⚠️ 尚未設定完成營業時間。請重新設定。');
+    }
+  }
 
+  else if (text === '確認設定') {
+    const { start, end } = userState[userId] || {};
+    if (start && end) {
+      await replyText(event.replyToken, `✅ 已成功設定營業時間：\n${start} ~ ${end}`);
+      delete userState[userId]; // 清除暫存狀態
+    } else {
+      await replyText(event.replyToken, '⚠️ 無法確認設定，請重新操作一次。');
+    }
+  } else if (text === '重新設定') {
+    userState[userId] = { step: 'start' };
+    await sendTimeQuickReply(event.replyToken, '請重新選擇營業開始時間：', 'start');
+  }
+  
   // 其他訊息
   else {
     await replyText(event.replyToken, '請依照說明操作：\n1. 傳送位置\n2. 輸入「設定營業時間」');
