@@ -1,4 +1,4 @@
-// ✅ LINE Bot - Foot Traffic Setup (Traditional Chinese)
+// ✅ LINE Bot - 歡迎訊息、位置分享與營業時間設定（繁體中文）
 
 const CHANNEL_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const axios = require('axios');
@@ -9,26 +9,31 @@ const port = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 
-const userState = {}; // 儲存每位使用者的營業時間選擇狀態
+const userState = {}; // 儲存使用者的營業時間設定進度
 
 app.post('/webhook', async (req, res) => {
   const event = req.body.events[0];
   const userId = event.source?.userId;
-  const text = event.message?.text;
+  const message = event.message;
+  const text = message?.text;
   const postbackData = event.postback?.data;
 
   console.log('📩 收到訊息:', text || postbackData);
   console.log('👤 使用者 ID:', userId);
 
-  if (!userId) {
-    console.error('⚠️ 使用者 ID 無法取得');
-    return res.sendStatus(200);
-  }
+  if (!userId) return res.sendStatus(200);
 
-  if (text === '設定營業時間') {
+  // 使用者傳送位置
+  if (message?.type === 'location') {
+    await replyText(event.replyToken, `✅ 已收到您的位置！請繼續設定營業時間，輸入「設定營業時間」`);
+  }
+  // 開始設定營業時間
+  else if (text === '設定營業時間') {
     userState[userId] = { step: 'start' };
     await sendTimeQuickReply(userId, '請選擇營業開始時間：');
-  } else if (postbackData?.startsWith('SELECT_TIME_')) {
+  }
+  // 使用者選擇時間
+  else if (postbackData?.startsWith('SELECT_TIME_')) {
     const hour = parseInt(postbackData.replace('SELECT_TIME_', ''));
     const label = `${hour.toString().padStart(2, '0')}:00`;
 
@@ -38,16 +43,23 @@ app.post('/webhook', async (req, res) => {
       await sendTimeQuickReply(userId, '請選擇營業結束時間：');
     } else if (userState[userId]?.step === 'end') {
       userState[userId].end = label;
-      const start = userState[userId].start;
-      const end = userState[userId].end;
+      const { start, end } = userState[userId];
       await pushMessage(userId, {
         type: 'text',
         text: `✅ 營業時間已設定為：\n${start} ~ ${end}`
       });
       delete userState[userId];
     }
+  }
+  // 初次互動或其他訊息
+  else if (text === '開始' || text === 'hi' || text === '你好') {
+    await replyText(event.replyToken, `👋 歡迎使用人流預測機器人！
+
+請依下列步驟完成設定：
+1️⃣ 請分享您的店家位置（使用 LINE 的「位置」功能）
+2️⃣ 輸入「設定營業時間」並選擇營業時段`);
   } else {
-    await replyText(event.replyToken, '您好！請使用選單操作～');
+    await replyText(event.replyToken, '請依照說明操作：\n1. 傳送位置\n2. 輸入「設定營業時間」');
   }
 
   res.sendStatus(200);
@@ -57,7 +69,7 @@ async function replyText(replyToken, text) {
   const url = 'https://api.line.me/v2/bot/message/reply';
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`
+    Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`
   };
   const body = {
     replyToken,
@@ -70,7 +82,7 @@ async function pushMessage(userId, message) {
   const url = 'https://api.line.me/v2/bot/message/push';
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`
+    Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`
   };
   const body = {
     to: userId,
@@ -101,10 +113,10 @@ async function sendTimeQuickReply(userId, promptText) {
       quickReply: { items: quickReplyItems }
     });
   } catch (error) {
-    console.error('⚠️ Error in sendTimeQuickReply:', error);
+    console.error('⚠️ 錯誤：sendTimeQuickReply', error);
   }
 }
 
 app.listen(port, () => {
-  console.log(`🚀 LINE Bot running on port ${port}`);
+  console.log(`🚀 LINE Bot 已啟動，埠號 ${port}`);
 });
