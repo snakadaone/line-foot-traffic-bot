@@ -162,29 +162,6 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
     }
   }
   
-
-    const url = 'https://api.line.me/v2/bot/message/reply';
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`
-    };
-
-    const body = {
-      replyToken,
-      messages: [{
-        type: 'text',
-        text: promptText,
-        quickReply: {
-          items: quickReplyItems
-        }
-      }]
-    };
-
-    await axios.post(url, body, { headers });
-  } catch (error) {
-    console.error('❗ quickReply 發生錯誤：', error.response?.data || error);
-  }
-}
 async function replyConfirmTime(replyToken, start, end) {
     const url = 'https://api.line.me/v2/bot/message/reply';
     const headers = {
