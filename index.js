@@ -88,8 +88,15 @@ function replyMessage(userId, text) {
 }
 
 function sendTimeQuickReply(userId, prompt) {
-  const times = ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
-  const items = times.map(t => ({ type: 'action', action: { type: 'message', label: t, text: t } }));
+  const times = Array.from({ length: 24 }, (_, i) => {
+    const hour = i.toString().padStart(2, '0');
+    return `${hour}:00`;
+  });
+
+  const items = times.map(t => ({
+    type: 'action',
+    action: { type: 'message', label: t, text: t }
+  }));
 
   return axios.post('https://api.line.me/v2/bot/message/push', {
     to: userId,
