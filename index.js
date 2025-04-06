@@ -118,7 +118,46 @@ async function sendTimeQuickReply(replyToken, promptText) {
     console.error('❗ quickReply 發生錯誤：', error.response?.data || error);
   }
 }
-
+async function replyConfirmTime(replyToken, start, end) {
+    const url = 'https://api.line.me/v2/bot/message/reply';
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+    };
+  
+    const body = {
+      replyToken,
+      messages: [
+        {
+          type: 'text',
+          text: `✅ 營業時間已設定為：\n${start} ~ ${end}\n請確認或重新設定：`,
+          quickReply: {
+            items: [
+              {
+                type: 'action',
+                action: {
+                  type: 'message',
+                  label: '✅ 確認',
+                  text: '確認營業時間',
+                },
+              },
+              {
+                type: 'action',
+                action: {
+                  type: 'message',
+                  label: '🔄 重新設定',
+                  text: '設定營業時間',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+  
+    await axios.post(url, body, { headers });
+  }
+  
 app.listen(port, () => {
   console.log(`🚀 LINE Bot 已啟動：埠號 ${port}`);
 });
