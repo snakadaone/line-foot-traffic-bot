@@ -46,7 +46,6 @@ app.post('/webhook', async (req, res) => {
       userState[userId].end = label;
       const { start, end } = userState[userId];
       await replyConfirmTime(event.replyToken, start, end);
-      delete userState[userId];
     }
   }
 
