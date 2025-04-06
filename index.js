@@ -1,4 +1,5 @@
 // ✅ 修正版本：支援歡迎訊息、位置、營業時間（回覆式 quickReply）
+require('dotenv').config();
 
 const CHANNEL_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const axios = require('axios');
@@ -203,6 +204,33 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
       console.error('❗ quickReply 發生錯誤：', error.response?.data || error);
     }
   }
+async function getWeatherForecast(cityName) {
+  try {
+    const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=${process.env.CWB_API_KEY}&format=JSON&locationName=${encodeURIComponent(cityName)}`;
+
+    const res = await axios.get(url);
+    const locationData = res.data.records.location[0];
+
+    const timeSlots = locationData.weatherElement[0].time;
+
+    // Format the 3 segments: 早上 / 下午 / 晚上
+    const morning = timeSlots[0];
+    const afternoon = timeSlots[1];
+    const night = timeSlots[2];
+
+    const result = {
+      city: locationData.locationName,
+      morning: morning.parameter.parameterName,
+      afternoon: afternoon.parameter.parameterName,
+      night: night.parameter.parameterName
+    };
+
+    return result;
+  } catch (error) {
+    console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error);
+    return null;
+  }
+}
   
 async function replyConfirmTime(replyToken, start, end) {
     const url = 'https://api.line.me/v2/bot/message/reply';
