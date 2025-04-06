@@ -32,7 +32,14 @@ app.post('/webhook', async (req, res) => {
     userState[userId] = { step: 'start' };
     await sendTimeQuickReply(event.replyToken, '請選擇營業開始時間：');
   }
-
+  else if (text === '查看更多開始時間') {
+    await sendTimeQuickReply(event.replyToken, '請選擇營業開始時間：', 'start', 'second');
+  }
+  
+  else if (text === '查看更多結束時間') {
+    await sendTimeQuickReply(event.replyToken, '請選擇營業結束時間：', 'end', 'second');
+  }
+  
   // 使用者點選時間
   else if (postbackData?.startsWith('SELECT_TIME_')) {
     const hour = parseInt(postbackData.replace('SELECT_TIME_', ''));
@@ -101,21 +108,60 @@ async function replyText(replyToken, text) {
   await axios.post(url, body, { headers });
 }
 
-async function sendTimeQuickReply(replyToken, promptText) {
-  try {
-    const hours = Array.from({ length: 13 }, (_, i) => i); // ✅ 限制最多 13 個按鈕
-    const quickReplyItems = hours.map(hour => {
-      const label = `${hour.toString().padStart(2, '0')}:00`;
-      return {
-        type: 'action',
-        action: {
-          type: 'postback',
-          label,
-          data: `SELECT_TIME_${hour}`,
-          displayText: `已選擇 ${label}`
-        }
+async function sendTimeQuickReply(replyToken, promptText, step = 'start', range = 'first') {
+    try {
+      const hours =
+        range === 'first'
+          ? Array.from({ length: 13 }, (_, i) => i) // 0 ~ 12
+          : Array.from({ length: 11 }, (_, i) => i + 13); // 13 ~ 23
+  
+      const quickReplyItems = hours.map(hour => {
+        const label = `${hour.toString().padStart(2, '0')}:00`;
+        return {
+          type: 'action',
+          action: {
+            type: 'postback',
+            label,
+            data: `SELECT_TIME_${hour}`,
+            displayText: `已選擇 ${label}`
+          }
+        };
+      });
+  
+      if (range === 'first') {
+        quickReplyItems.push({
+          type: 'action',
+          action: {
+            type: 'message',
+            label: '⌛ 查看更多時段',
+            text: step === 'start' ? '查看更多開始時間' : '查看更多結束時間'
+          }
+        });
+      }
+  
+      const url = 'https://api.line.me/v2/bot/message/reply';
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`
       };
-    });
+  
+      const body = {
+        replyToken,
+        messages: [{
+          type: 'text',
+          text: promptText,
+          quickReply: {
+            items: quickReplyItems
+          }
+        }]
+      };
+  
+      await axios.post(url, body, { headers });
+    } catch (error) {
+      console.error('❗ quickReply 發生錯誤：', error.response?.data || error);
+    }
+  }
+  
 
     const url = 'https://api.line.me/v2/bot/message/reply';
     const headers = {
