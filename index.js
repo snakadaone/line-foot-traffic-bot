@@ -1,6 +1,6 @@
 // ✅ LINE Bot - Foot Traffic Setup (Traditional Chinese)
 
-const CHANNEL_ACCESS_TOKEN = process.env.EW+GPaNwSUuhrj3btZXrACSP/5xGSk5Rg5mm/F8giRH74SEhVuHnnKhfQryfN/h8Xxe4NZfXIC0gp3XU22jEzWWTqa7zYNQVpg616Cx/9yFkzRsOe0NZzw69c0q8hLN+LMO8HGbkxLc+RiDFGJn8LAdB04t89/1O/w1cDnyilFU=;
+const CHANNEL_ACCESS_TOKEN = process.env.EW+GPaNwSUuhrj3btZXrACSP/5xGSk5Rg5mm/F8giRH74SEhVuHnnKhfQryfN/h8Xxe4NZfXIC0gp3XU22jEzWWTqa7zYNQVpg616Cx/9yFkzRsOe0NZzw69c0q8hLN+LMO8HGbkxLc+RiDFGJn8LAdB04t89/1O/w1cDnyilFU=
 const axios = require('axios');
 const express = require('express');
 const bodyParser = require('body-parser');
