@@ -30,6 +30,9 @@ app.post('/webhook', async (req, res) => {
     // 🔁 Reverse geocode to get city
     const city = await reverseGeocode(latitude, longitude);
   
+    // ✅ Add log to debug
+    console.log('🌆 Reverse geocoded city:', city);
+
     // ✅ Get weather forecast for this city
     const weather = await getWeatherForecast(city)
 
@@ -217,8 +220,10 @@ async function getWeatherForecast(cityName) {
     const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=${process.env.CWB_API_KEY}&format=JSON&locationName=${encodeURIComponent(cityName)}`;
 
     const res = await axios.get(url);
+    // ✅ Debug log BEFORE trying to access location[0]
+    console.log('📦 Raw CWB locations:', res.data.records.location.map(l => l.locationName));
     const locationData = res.data.records.location[0];
-
+    
     const timeSlots = locationData.weatherElement[0].time;
 
     // Format the 3 segments: 早上 / 下午 / 晚上
