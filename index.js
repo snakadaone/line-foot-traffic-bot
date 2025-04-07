@@ -266,7 +266,15 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     console.log('📦 所有 locationsName:', locations.map(l => l.locationsName));
 
     // Step 1: 找出縣市區塊
+    const allCityNames = locations.map(loc => loc.locationsName);
+    console.log('📦 所有縣市 from CWB:', allCityNames);
+
     const cityBlock = locations.find(loc => loc.locationsName === cityOnly);
+    if (!cityBlock) {
+      console.error(`❗ 找不到縣市 ${cityOnly}`);
+      return null;
+    }
+
     if (cityBlock) {
         const districtNames = cityBlock.location.map(loc => loc.locationName);
         console.log(`📍 ${cityOnly} 下的所有地區:`, districtNames);
