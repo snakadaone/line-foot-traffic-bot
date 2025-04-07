@@ -161,7 +161,8 @@ async function reverseGeocode(lat, lng) {
     }
 
     if (district && county) {
-      return `${county}${district}`; // e.g., 新北市三峽區
+      const cleanedDistrict = district.replace(/(里|村|鄰)$/, '');
+      return `${county}${cleanedDistrict}`;
     }
 
     return null;
