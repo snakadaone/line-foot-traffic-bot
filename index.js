@@ -161,8 +161,9 @@ async function reverseGeocode(lat, lng) {
     }
 
     if (district && county) {
-      const cleanedDistrict = district.replace(/(里|村|鄰)$/, '');
-      return `${county}${cleanedDistrict}`;
+       // 只接受區／鎮／鄉等行政區，不要包含里名或太細的資料
+       if (/^(.*?[區鎮鄉])$/.test(district)) {
+         return `${county}${district}`;
     }
 
     return null;
