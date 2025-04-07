@@ -30,14 +30,22 @@ app.post('/webhook', async (req, res) => {
     // 🔁 Reverse geocode to get city
     const city = await reverseGeocode(latitude, longitude);
   
-    // ✅ Store city name in userState
+    // ✅ Get weather forecast for this city
+    const weather = await getWeatherForecast(city)
+
+    // ✅ Save to userState
     userState[userId] = {
       ...userState[userId],
       location: { lat: latitude, lng: longitude },
-      city
+      city,
+      weather  // ← new addition
     };
   
-    await replyText(event.replyToken, `✅ 已收到您的位置！\n📍 您所在的城市是：${city}\n請繼續輸入「設定營業時間」`);
+    await replyText(
+        event.replyToken,
+        `✅ 已收到您的位置！\n📍 您所在的城市是：${city}\n☀️ 白天：${weather.morning}\n🌆 下午：${weather.afternoon}\n🌙 晚上：${weather.night}\n\n請繼續輸入「設定營業時間」`
+      );
+      
   }
   
 
