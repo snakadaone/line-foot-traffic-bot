@@ -153,23 +153,22 @@ async function reverseGeocode(lat, lng) {
       for (const comp of result.address_components) {
         const name = comp.long_name;
       
-        if (!district && comp.types.includes('administrative_area_level_3') && /(區|鎮|鄉)$/.test(name)) {
-          district = name;
-        }
-      
+        // Get the county/city (like 新北市)
         if (!county && (
-          comp.types.includes('administrative_area_level_2') || 
-          comp.types.includes('administrative_area_level_1'))
-        ) {
+            comp.types.includes('administrative_area_level_2') ||
+            comp.types.includes('administrative_area_level_1')
+        )) {
             county = name;
         }
       
-        // ✅ Once both found, break inner loop
-        if (district && county) break;
+        // Get the district (like 三峽區), avoid things like 中正里
+        if (!district && comp.types.includes('administrative_area_level_3') && /[區鎮鄉]$/.test(name)) {
+          district = name;
         }
       
-        // ✅ Break outer loop too
         if (district && county) break;
+      }
+      if (district && county) break;
     }
       
 
