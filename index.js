@@ -241,8 +241,11 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
   }
 async function getWeatherForecast(fullDistrictName) {
   try {
-    const districtOnly = fullDistrictName.replace(/^(.*?[市縣])/, ''); // Remove 新北市 → 三峽區
-    const cityOnly = fullDistrictName.match(/^(.*?[市縣])/)[1];        // Extract 新北市
+    const districtOnly = fullDistrictName.replace(/^(.*?[市縣])/, ''); // 三峽區
+    const cityOnly = fullDistrictName.match(/^(.*?[市縣])/)[1];        // 新北市
+
+    console.log('🔍 cityOnly:', cityOnly);
+    console.log('🔍 districtOnly:', districtOnly);
 
     const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-D0047-093?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
 
@@ -256,12 +259,16 @@ async function getWeatherForecast(fullDistrictName) {
       return null;
     }
 
+    console.log('✅ 找到縣市:', cityOnly);
+
     const location = cityBlock.location.find(loc => loc.locationName === districtOnly);
 
     if (!location) {
       console.error('❗ 找不到行政區資料:', districtOnly);
       return null;
     }
+
+    console.log('✅ 找到行政區:', districtOnly);
 
     const times = location.weatherElement.find(el => el.elementName === 'Wx').time;
 
@@ -277,6 +284,7 @@ async function getWeatherForecast(fullDistrictName) {
     return null;
   }
 }
+
   
 async function replyConfirmTime(replyToken, start, end) {
     const url = 'https://api.line.me/v2/bot/message/reply';
