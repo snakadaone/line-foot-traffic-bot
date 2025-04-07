@@ -257,40 +257,56 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
 }
 
 async function getWeatherForecast(cityOnly, districtOnly) {
+  const datasetMap = {
+    '宜蘭縣': 'F-D0047-001',
+    '桃園市': 'F-D0047-005',
+    '新竹縣': 'F-D0047-009',
+    '苗栗縣': 'F-D0047-013',
+    '彰化縣': 'F-D0047-017',
+    '南投縣': 'F-D0047-021',
+    '雲林縣': 'F-D0047-025',
+    '嘉義縣': 'F-D0047-029',
+    '屏東縣': 'F-D0047-033',
+    '臺東縣': 'F-D0047-037',
+    '花蓮縣': 'F-D0047-041',
+    '澎湖縣': 'F-D0047-045',
+    '基隆市': 'F-D0047-049',
+    '新竹市': 'F-D0047-053',
+    '嘉義市': 'F-D0047-057',
+    '臺北市': 'F-D0047-061',
+    '高雄市': 'F-D0047-065',
+    '新北市': 'F-D0047-069',
+    '臺中市': 'F-D0047-073',
+    '臺南市': 'F-D0047-077',
+    '連江縣': 'F-D0047-081',
+    '金門縣': 'F-D0047-085'
+  };
+
   try {
-    const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-D0047-093?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
+    const datasetId = datasetMap[cityOnly];
+    if (!datasetId) {
+      console.error(`❗ 找不到對應資料集代碼 for ${cityOnly}`);
+      return null;
+    }
+
+    const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${datasetId}?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
 
     const res = await axios.get(url);
-    const locations = res.data.records.locations;
 
-    // 🧾 縣市清單
-    console.log('📦 所有 locationsName:', locations.map(l => l.locationsName));
+    const locations = res.data.records.location;
+    const locationData = locations.find(loc => loc.locationName === districtOnly);
 
-    // 找縣市區塊
-    const cityBlock = locations.find(loc => loc.locationsName === cityOnly);
-    if (!cityBlock) {
-      console.error(`❗ 找不到縣市 ${cityOnly}`);
-      return null;
-    }
-
-    const districtNames = cityBlock.location.map(loc => loc.locationName);
-    console.log(`🏘️ ${cityOnly} 所有地區:`, districtNames);
-
-    // 找鄉鎮區塊
-    const locationData = cityBlock.location.find(loc => loc.locationName === districtOnly);
     if (!locationData) {
-      console.error(`❗ 找不到區鄉鎮 ${districtOnly} in ${cityOnly}`);
+      console.error(`❗ 找不到 ${districtOnly} in ${cityOnly}`);
       return null;
     }
 
-    // 取天氣資料
     const times = locationData.weatherElement.find(el => el.elementName === 'Wx')?.time;
     if (!times || times.length < 3) {
       console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
       return null;
     }
 
-    // 回傳早午晚資料
     const result = {
       morning: times[0].elementValue[0].value,
       afternoon: times[1].elementValue[0].value,
@@ -303,6 +319,7 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     return null;
   }
 }
+
 
 
 
