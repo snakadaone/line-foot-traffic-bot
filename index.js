@@ -152,11 +152,14 @@ async function reverseGeocode(lat, lng) {
     for (const result of results) {
       for (const comp of result.address_components) {
         if (comp.types.includes('administrative_area_level_3')) {
-          // 🏘️ Real district
+          // 🏘️ True district (may include 里)
           district = comp.long_name;
         }
-        if (comp.types.includes('administrative_area_level_2')) {
-          // 🏙️ City/County
+        if (
+          comp.types.includes('administrative_area_level_1') ||
+          comp.types.includes('administrative_area_level_2')
+        ) {
+          // 🏙️ County/City
           county = comp.long_name;
         }
       }
@@ -166,9 +169,9 @@ async function reverseGeocode(lat, lng) {
     console.log('🏘️ district:', district);
 
     if (district && county) {
-      // ✅ Only accept 區 / 鎮 / 鄉, not 里 or smaller
-      if (/^(.*?[區鎮鄉])$/.test(district)) {
-        return `${county}${district}`;  // e.g., 新北市三峽區
+      // ✅ Only accept 行政區 ending with 區、鎮、鄉
+      if (/(區|鎮|鄉)$/.test(district)) {
+        return `${county}${district}`; // e.g., 新北市三峽區
       }
     }
 
@@ -178,9 +181,6 @@ async function reverseGeocode(lat, lng) {
     return null;
   }
 }
-
-
-
 
 async function sendTimeQuickReply(replyToken, promptText, step = 'start', range = 'first') {
     try {
