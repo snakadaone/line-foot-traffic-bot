@@ -267,6 +267,11 @@ async function getWeatherForecast(cityOnly, districtOnly) {
 
     // Step 1: 找出縣市區塊
     const cityBlock = locations.find(loc => loc.locationsName === cityOnly);
+    if (cityBlock) {
+        const districtNames = cityBlock.location.map(loc => loc.locationName);
+        console.log(`📍 ${cityOnly} 下的所有地區:`, districtNames);
+    }
+      
     if (!cityBlock) {
       console.error(`❗ 找不到縣市 ${cityOnly}`);
       return null;
