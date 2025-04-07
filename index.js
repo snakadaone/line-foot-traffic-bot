@@ -56,9 +56,10 @@ app.post('/webhook', async (req, res) => {
     userState[userId] = {
       ...userState[userId],
       location: { lat: latitude, lng: longitude },
-      city,
+      city: cityOnly,
       weather  // ← new addition
     };
+      
   
     await replyText(
         event.replyToken,
@@ -324,14 +325,6 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     return null;
   }
 }
-
-
-
-
-
-
-
-
 
 
   
