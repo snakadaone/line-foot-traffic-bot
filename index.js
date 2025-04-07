@@ -260,6 +260,19 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-D0047-093?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
 
     const res = await axios.get(url);
+
+    const locations = res.data.records.locations;
+    console.log('🧾 所有縣市：', locations.map(loc => loc.locationsName));
+
+    // Optional: check if cityOnly exists
+    const cityBlock = locations.find(loc => loc.locationsName === cityOnly);
+    if (cityBlock) {
+      const districts = cityBlock.location.map(loc => loc.locationName);
+      console.log(`🏘️ ${cityOnly} 所有地區:`, districts);
+    } else {
+      console.error(`❗ 找不到縣市 ${cityOnly}`);
+    }
+
     const locations = res.data.records.locations;
 
     // Log all available city names
