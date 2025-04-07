@@ -292,9 +292,18 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${datasetId}?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
     const res = await axios.get(url);
 
+    // ❗ Check for malformed response
+    if (
+      !res.data.records?.locations ||
+      !Array.isArray(res.data.records.locations) ||
+      res.data.records.locations.length === 0
+    ) {
+      console.error('❗ CWB 回傳格式錯誤或沒有資料');
+      return null;
+    }
+
     const locations = res.data.records.locations[0].location;
 
-    // 🔍 印出所有地區名稱以供除錯
     const availableDistricts = locations.map(loc => loc.locationName);
     console.log(`📍 ${cityOnly} 可用區鄉鎮:`, availableDistricts);
 
@@ -320,6 +329,7 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     return null;
   }
 }
+
 
 
 
