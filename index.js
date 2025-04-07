@@ -273,7 +273,7 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       console.error(`❗ 找不到縣市 ${cityOnly}`);
     }
 
-    const locations = res.data.records.locations;
+   
 
     // Log all available city names
     console.log('📦 所有 locationsName:', locations.map(l => l.locationsName));
