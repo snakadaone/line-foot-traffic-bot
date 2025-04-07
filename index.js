@@ -146,40 +146,36 @@ async function reverseGeocode(lat, lng) {
     });
 
     const results = res.data.results;
-    let district = null;
-    let county = null;
+    let level1 = null; // e.g., 新北市
+    let level2 = null; // e.g., 三峽區
+    let level3 = null; // e.g., 中正里
 
     for (const result of results) {
       for (const comp of result.address_components) {
+        const types = comp.types;
         const name = comp.long_name;
-      
-        // Get the county/city (like 新北市)
-        if (!county && (
-            comp.types.includes('administrative_area_level_2') ||
-            comp.types.includes('administrative_area_level_1')
-        )) {
-            county = name;
+
+        if (types.includes('administrative_area_level_1')) {
+          level1 = name;
         }
-      
-        // Get the district (like 三峽區), avoid things like 中正里
-        if (!district && comp.types.includes('administrative_area_level_3') && /[區鎮鄉]$/.test(name)) {
-          district = name;
+        if (types.includes('administrative_area_level_2')) {
+          level2 = name;
         }
-      
-        if (district && county) break;
+        if (types.includes('administrative_area_level_3')) {
+          level3 = name;
+        }
       }
-      if (district && county) break;
     }
-      
 
-    console.log('🏙️ county:', county);
-    console.log('🏘️ district:', district);
+    console.log('🏙️ level1:', level1);
+    console.log('🏘️ level2:', level2);
+    console.log('🏡 level3:', level3);
 
-    if (district && county) {
-      // ✅ Only accept 行政區 ending with 區、鎮、鄉
-      if (/(區|鎮|鄉)$/.test(district)) {
-        return `${county}${district}`; // e.g., 新北市三峽區
-      }
+    const district = /[區鎮鄉]$/.test(level2) ? level2 :
+                     /[區鎮鄉]$/.test(level3) ? level3 : null;
+
+    if (level1 && district) {
+      return `${level1}${district}`; // e.g., 新北市三峽區
     }
 
     return null;
@@ -188,6 +184,7 @@ async function reverseGeocode(lat, lng) {
     return null;
   }
 }
+
 
 async function sendTimeQuickReply(replyToken, promptText, step = 'start', range = 'first') {
     try {
