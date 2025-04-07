@@ -290,17 +290,23 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     }
 
     const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${datasetId}?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
+
     const res = await axios.get(url);
-    
-    const locations = res.data.records?.locations?.[0]?.location;
-    if (!locations) {
-      console.error(`❗ CWB 回傳格式錯誤或沒有資料`);
+
+    // 🔍 DEBUG: Check entire response
+    const root = res.data;
+    if (!root?.records?.locations?.[0]?.location) {
+      console.error('❗ CWB 回傳格式錯誤或沒有資料', JSON.stringify(root, null, 2));
       return null;
     }
+
+    const locations = root.records.locations[0].location;
 
     const locationData = locations.find(loc => loc.locationName === districtOnly);
     if (!locationData) {
       console.error(`❗ 找不到區鄉鎮 ${districtOnly} in ${cityOnly}`);
+      const available = locations.map(l => l.locationName);
+      console.log('📍 可用地區:', available);
       return null;
     }
 
@@ -320,6 +326,7 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     return null;
   }
 }
+
 
 
 
