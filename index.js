@@ -27,14 +27,30 @@ app.post('/webhook', async (req, res) => {
   if (event.message?.type === 'location') {
     const { latitude, longitude } = event.message;
   
-    // 🔁 Reverse geocode to get city
-    const city = await reverseGeocode(latitude, longitude);
-  
-    // ✅ Add log to debug
-    console.log('🌆 Reverse geocoded city:', city);
+    // 🔁 Reverse geocode to get city + district
+    const cityDistrict = await reverseGeocode(latitude, longitude);
 
-    // ✅ Get weather forecast for this city
-    const weather = await getWeatherForecast(city)
+    if (!cityDistrict) {
+      await replyText(event.replyToken, '❗ 無法取得您所在區域的天氣資料，請確認位置是否正確。');
+      return;
+  }
+
+    console.log('🌆 Reverse geocoded cityDistrict:', cityDistrict);
+
+    // 拆出 cityOnly 與 districtOnly 用來查詢 CWB API
+    const match = cityDistrict.match(/^(.*?[市縣])(.*?[區鎮鄉])$/);
+    const cityOnly = match?.[1];
+    const districtOnly = match?.[2];
+
+    console.log('🔍 cityOnly:', cityOnly);
+    console.log('🔍 districtOnly:', districtOnly);
+
+    const weather = await getWeatherForecast(cityOnly, districtOnly);
+
+    if (!weather) {
+      await replyText(event.replyToken, '⚠️ 無法取得天氣預報，請稍後再試。');
+      return;
+}
 
     // ✅ Save to userState
     userState[userId] = {
@@ -239,43 +255,49 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
       console.error('❗ quickReply 發生錯誤：', error.response?.data || error);
     }
   }
-async function getWeatherForecast(fullDistrictName) {
+async function getWeatherForecast(cityOnly, districtOnly) {
   try {
-    const districtOnly = fullDistrictName.replace(/^(.*?[市縣])/, ''); // 三峽區
-    const cityOnly = fullDistrictName.match(/^(.*?[市縣])/)[1];        // 新北市
-
-    console.log('🔍 cityOnly:', cityOnly);
-    console.log('🔍 districtOnly:', districtOnly);
-
     const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-D0047-093?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
 
     const res = await axios.get(url);
 
-    const locations = res.data.records.locations;
-    const cityBlock = locations.find(loc => loc.locationsName === cityOnly);
-
+    // Step 1: 找出對應的縣市區塊（locationsName）
+    const cityBlock = res.data.records.locations.find(
+      (loc) => loc.locationsName === cityOnly
+    );
     if (!cityBlock) {
-      console.error('❗ 找不到縣市區塊:', cityOnly);
+      console.error(`❗ 找不到縣市 ${cityOnly}`);
       return null;
     }
 
-    console.log('✅ 找到縣市:', cityOnly);
-
-    const location = cityBlock.location.find(loc => loc.locationName === districtOnly);
-
-    if (!location) {
-      console.error('❗ 找不到行政區資料:', districtOnly);
+    // Step 2: 找出對應的鄉鎮區塊（locationName）
+    const locationData = cityBlock.location.find(
+      (loc) => loc.locationName === districtOnly
+    );
+    if (!locationData) {
+      console.error(`❗ 找不到區鄉鎮 ${districtOnly} in ${cityOnly}`);
       return null;
     }
 
-    console.log('✅ 找到行政區:', districtOnly);
+    // Step 3: 抓出天氣現象 Wx 時間資料
+    const times = locationData.weatherElement.find(
+      (el) => el.elementName === 'Wx'
+    )?.time;
 
-    const times = location.weatherElement.find(el => el.elementName === 'Wx').time;
+    if (!times || times.length < 3) {
+      console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
+      return null;
+    }
+
+    // Step 4: 擷取早上、下午、晚上預報
+    const morning = times[0];   // 06:00–12:00
+    const afternoon = times[1]; // 12:00–18:00
+    const night = times[2];     // 18:00–00:00
 
     const result = {
-      morning: times[0].elementValue[0].value,
-      afternoon: times[1].elementValue[0].value,
-      night: times[2].elementValue[0].value
+      morning: morning.elementValue[0].value,
+      afternoon: afternoon.elementValue[0].value,
+      night: night.elementValue[0].value
     };
 
     return result;
@@ -284,6 +306,7 @@ async function getWeatherForecast(fullDistrictName) {
     return null;
   }
 }
+
 
   
 async function replyConfirmTime(replyToken, start, end) {
