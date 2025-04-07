@@ -310,6 +310,9 @@ async function getWeatherForecast(cityOnly, districtOnly) {
 
     const weatherElement = locationData.WeatherElement.find(el => el.ElementName === '天氣現象'); // 'Wx' is only in some endpoints
     const times = weatherElement?.Time;
+
+    console.log('🕒 weatherElement.Time:', JSON.stringify(weatherElement.Time, null, 2));
+
     if (!times || times.length < 3) {
       console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
       return null;
