@@ -290,36 +290,34 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     }
 
     const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${datasetId}?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
-
     const res = await axios.get(url);
 
-    // 🔍 DEBUG: Check entire response
     const root = res.data;
-    if (!root?.records?.locations?.[0]?.location) {
+    const locations = root?.records?.Locations?.[0]?.Location;
+    if (!locations) {
       console.error('❗ CWB 回傳格式錯誤或沒有資料', JSON.stringify(root, null, 2));
       return null;
     }
 
-    const locations = root.records.locations[0].location;
-
-    const locationData = locations.find(loc => loc.locationName === districtOnly);
+    const locationData = locations.find(loc => loc.LocationName === districtOnly);
     if (!locationData) {
       console.error(`❗ 找不到區鄉鎮 ${districtOnly} in ${cityOnly}`);
-      const available = locations.map(l => l.locationName);
+      const available = locations.map(l => l.LocationName);
       console.log('📍 可用地區:', available);
       return null;
     }
 
-    const times = locationData.weatherElement.find(el => el.elementName === 'Wx')?.time;
+    const weatherElement = locationData.WeatherElement.find(el => el.ElementName === '天氣現象'); // 'Wx' is only in some endpoints
+    const times = weatherElement?.Time;
     if (!times || times.length < 3) {
       console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
       return null;
     }
 
     return {
-      morning: times[0].elementValue[0].value,
-      afternoon: times[1].elementValue[0].value,
-      night: times[2].elementValue[0].value
+      morning: times[0].ElementValue?.[0]?.Value,
+      afternoon: times[1].ElementValue?.[0]?.Value,
+      night: times[2].ElementValue?.[0]?.Value
     };
   } catch (error) {
     console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error.message);
