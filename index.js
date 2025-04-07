@@ -241,14 +241,6 @@ async function getWeatherForecast(districtName) {
     return null;
   }
 }
-
-
-    return result;
-  } catch (error) {
-    console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error);
-    return null;
-  }
-}
   
 async function replyConfirmTime(replyToken, start, end) {
     const url = 'https://api.line.me/v2/bot/message/reply';
