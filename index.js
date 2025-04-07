@@ -152,30 +152,33 @@ async function reverseGeocode(lat, lng) {
     for (const result of results) {
       for (const comp of result.address_components) {
         if (comp.types.includes('administrative_area_level_3')) {
+          // 🏘️ Real district
           district = comp.long_name;
         }
         if (comp.types.includes('administrative_area_level_2')) {
+          // 🏙️ City/County
           county = comp.long_name;
         }
       }
     }
+
     console.log('🏙️ county:', county);
     console.log('🏘️ district:', district);
 
     if (district && county) {
-       // 只接受區／鎮／鄉等行政區，不要包含里名或太細的資料
-       if (/^(.*?[區鎮鄉])$/.test(district)) {
-         return `${county}${district}`;
-        }
+      // ✅ Only accept 區 / 鎮 / 鄉, not 里 or smaller
+      if (/^(.*?[區鎮鄉])$/.test(district)) {
+        return `${county}${district}`;  // e.g., 新北市三峽區
+      }
     }
 
     return null;
-
   } catch (error) {
     console.error('❗ reverseGeocode 錯誤:', error.response?.data || error);
     return null;
   }
 }
+
 
 
 
