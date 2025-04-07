@@ -151,10 +151,11 @@ async function reverseGeocode(lat, lng) {
 
     for (const result of results) {
       for (const comp of result.address_components) {
-        if (comp.types.includes('administrative_area_level_3')) {
-          // 🏘️ True district (may include 里)
-          district = comp.long_name;
-        }
+        if (comp.types.includes('administrative_area_level_3') && /[區鎮鄉]$/.test(comp.long_name)) {
+            // ✅ Only accept township-level districts like 三峽區
+            district = comp.long_name;
+          }
+          
         if (
           comp.types.includes('administrative_area_level_1') ||
           comp.types.includes('administrative_area_level_2')
