@@ -256,33 +256,33 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
     }
 }
 
-const cityToDatasetId = {
-  '基隆市': 'F-D0047-049',
-  '臺北市': 'F-D0047-061',
-  '新北市': 'F-D0047-069',
-  '桃園市': 'F-D0047-005',
-  '新竹市': 'F-D0047-053',
-  '新竹縣': 'F-D0047-009',
-  '苗栗縣': 'F-D0047-013',
-  '臺中市': 'F-D0047-073',
-  '彰化縣': 'F-D0047-017',
-  '南投縣': 'F-D0047-021',
-  '雲林縣': 'F-D0047-025',
-  '嘉義市': 'F-D0047-057',
-  '嘉義縣': 'F-D0047-029',
-  '臺南市': 'F-D0047-077',
-  '高雄市': 'F-D0047-065',
-  '屏東縣': 'F-D0047-033',
-  '宜蘭縣': 'F-D0047-001',
-  '花蓮縣': 'F-D0047-041',
-  '臺東縣': 'F-D0047-037',
-  '澎湖縣': 'F-D0047-045',
-  '金門縣': 'F-D0047-085',
-  '連江縣': 'F-D0047-081'
-};
-
 async function getWeatherForecast(cityOnly, districtOnly) {
   try {
+    const cityToDatasetId = {
+      '基隆市': 'F-D0047-049',
+      '臺北市': 'F-D0047-061',
+      '新北市': 'F-D0047-069',
+      '桃園市': 'F-D0047-005',
+      '新竹市': 'F-D0047-053',
+      '新竹縣': 'F-D0047-009',
+      '苗栗縣': 'F-D0047-013',
+      '臺中市': 'F-D0047-073',
+      '彰化縣': 'F-D0047-017',
+      '南投縣': 'F-D0047-021',
+      '雲林縣': 'F-D0047-025',
+      '嘉義市': 'F-D0047-057',
+      '嘉義縣': 'F-D0047-029',
+      '臺南市': 'F-D0047-077',
+      '高雄市': 'F-D0047-065',
+      '屏東縣': 'F-D0047-033',
+      '宜蘭縣': 'F-D0047-001',
+      '花蓮縣': 'F-D0047-041',
+      '臺東縣': 'F-D0047-037',
+      '澎湖縣': 'F-D0047-045',
+      '金門縣': 'F-D0047-085',
+      '連江縣': 'F-D0047-081'
+    };
+
     const datasetId = cityToDatasetId[cityOnly];
     if (!datasetId) {
       console.error(`❗ 無對應的 datasetId for ${cityOnly}`);
@@ -290,20 +290,17 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     }
 
     const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${datasetId}?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
-
     const res = await axios.get(url);
-    const locations = res.data.records?.location;
 
-    if (!locations || !Array.isArray(locations)) {
-      console.error(`❗ 無法取得 ${cityOnly} 的地區資料`);
-      return null;
-    }
+    const locations = res.data.records.locations[0].location;
+
+    // 🔍 印出所有地區名稱以供除錯
+    const availableDistricts = locations.map(loc => loc.locationName);
+    console.log(`📍 ${cityOnly} 可用區鄉鎮:`, availableDistricts);
 
     const locationData = locations.find(loc => loc.locationName === districtOnly);
     if (!locationData) {
-      const availableDistricts = locations.map(loc => loc.locationName);
       console.error(`❗ 找不到區鄉鎮 ${districtOnly} in ${cityOnly}`);
-      console.log(`📍 ${cityOnly} 可用區鄉鎮:`, availableDistricts);
       return null;
     }
 
@@ -323,6 +320,7 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     return null;
   }
 }
+
 
 
 
