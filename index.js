@@ -146,12 +146,22 @@ async function reverseGeocode(lat, lng) {
     });
 
     const results = res.data.results;
+    let district = null;
+    let county = null;
+
     for (const result of results) {
       for (const comp of result.address_components) {
-        if (comp.types.includes('administrative_area_level_1') || comp.types.includes('administrative_area_level_2')) {
-          return comp.long_name;
+        if (comp.types.includes('administrative_area_level_3')) {
+          district = comp.long_name;
+        }
+        if (comp.types.includes('administrative_area_level_2')) {
+          county = comp.long_name;
         }
       }
+    }
+
+    if (district && county) {
+      return `${county}${district}`; // e.g., 新北市三峽區
     }
 
     return null;
@@ -160,6 +170,7 @@ async function reverseGeocode(lat, lng) {
     return null;
   }
 }
+
 
 
 async function sendTimeQuickReply(replyToken, promptText, step = 'start', range = 'first') {
