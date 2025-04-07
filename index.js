@@ -261,21 +261,28 @@ async function getWeatherForecast(cityOnly, districtOnly) {
 
     const res = await axios.get(url);
 
+    const cityClean = cityOnly?.trim();
+    const districtClean = districtOnly?.trim();
+
+    console.log('🚨 Searching CWB for:', cityClean, '/', districtClean);
+
     // Step 1: 找出對應的縣市區塊（locationsName）
     const cityBlock = res.data.records.locations.find(
-      (loc) => loc.locationsName === cityOnly
+      (loc) => loc.locationsName.trim() === cityClean
     );
+
     if (!cityBlock) {
-      console.error(`❗ 找不到縣市 ${cityOnly}`);
+      console.error(`❗ 找不到縣市 ${cityClean}`);
       return null;
     }
 
     // Step 2: 找出對應的鄉鎮區塊（locationName）
     const locationData = cityBlock.location.find(
-      (loc) => loc.locationName === districtOnly
+      (loc) => loc.locationName.trim() === districtClean
     );
+
     if (!locationData) {
-      console.error(`❗ 找不到區鄉鎮 ${districtOnly} in ${cityOnly}`);
+      console.error(`❗ 找不到區鄉鎮 ${districtClean} in ${cityClean}`);
       return null;
     }
 
@@ -285,7 +292,7 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     )?.time;
 
     if (!times || times.length < 3) {
-      console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
+      console.error(`❗ 無法取得 ${districtClean} 的天氣資料時間`);
       return null;
     }
 
