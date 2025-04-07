@@ -319,10 +319,11 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     }
 
     return {
-      morning: times[0].ElementValue?.[0]?.Value,
-      afternoon: times[1].ElementValue?.[0]?.Value,
-      night: times[2].ElementValue?.[0]?.Value
+      morning: times[0].ElementValue?.[0]?.Weather,
+      afternoon: times[1].ElementValue?.[0]?.Weather,
+      night: times[2].ElementValue?.[0]?.Weather
     };
+      
   } catch (error) {
     console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error.message);
     return null;
