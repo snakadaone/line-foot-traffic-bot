@@ -260,59 +260,46 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-D0047-093?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
 
     const res = await axios.get(url);
+    const locations = res.data.records.locations;
 
-    const cityClean = cityOnly?.trim();
-    const districtClean = districtOnly?.trim();
+    // Log all available city names
+    console.log('📦 所有 locationsName:', locations.map(l => l.locationsName));
 
-    console.log('🚨 Searching CWB for:', cityClean, '/', districtClean);
-
-    // Step 1: 找出對應的縣市區塊（locationsName）
-    const cityBlock = res.data.records.locations.find(
-      (loc) => loc.locationsName.trim() === cityClean
-    );
-
+    // Step 1: 找出縣市區塊
+    const cityBlock = locations.find(loc => loc.locationsName === cityOnly);
     if (!cityBlock) {
-      console.error(`❗ 找不到縣市 ${cityClean}`);
+      console.error(`❗ 找不到縣市 ${cityOnly}`);
       return null;
     }
 
-    // Step 2: 找出對應的鄉鎮區塊（locationName）
-    const locationData = cityBlock.location.find(
-      (loc) => loc.locationName.trim() === districtClean
-    );
-
+    // Step 2: 找出鄉鎮區塊
+    const locationData = cityBlock.location.find(loc => loc.locationName === districtOnly);
     if (!locationData) {
-      console.error(`❗ 找不到區鄉鎮 ${districtClean} in ${cityClean}`);
+      console.error(`❗ 找不到區鄉鎮 ${districtOnly} in ${cityOnly}`);
       return null;
     }
 
-    // Step 3: 抓出天氣現象 Wx 時間資料
-    const times = locationData.weatherElement.find(
-      (el) => el.elementName === 'Wx'
-    )?.time;
-
+    // Step 3: 抓出 Wx 時間資料
+    const times = locationData.weatherElement.find(el => el.elementName === 'Wx')?.time;
     if (!times || times.length < 3) {
-      console.error(`❗ 無法取得 ${districtClean} 的天氣資料時間`);
+      console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
       return null;
     }
 
-    // Step 4: 擷取早上、下午、晚上預報
-    const morning = times[0];   // 06:00–12:00
-    const afternoon = times[1]; // 12:00–18:00
-    const night = times[2];     // 18:00–00:00
-
+    // Step 4: 擷取預報
     const result = {
-      morning: morning.elementValue[0].value,
-      afternoon: afternoon.elementValue[0].value,
-      night: night.elementValue[0].value
+      morning: times[0].elementValue[0].value,
+      afternoon: times[1].elementValue[0].value,
+      night: times[2].elementValue[0].value
     };
 
     return result;
   } catch (error) {
-    console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error);
+    console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error.message);
     return null;
   }
 }
+
 
 
   
