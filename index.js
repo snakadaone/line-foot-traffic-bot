@@ -254,65 +254,43 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
     } catch (error) {
       console.error('❗ quickReply 發生錯誤：', error.response?.data || error);
     }
-  }
+}
+
 async function getWeatherForecast(cityOnly, districtOnly) {
   try {
     const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-D0047-093?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
 
     const res = await axios.get(url);
-
     const locations = res.data.records.locations;
-    console.log('🧾 所有縣市：', locations.map(loc => loc.locationsName));
 
-    // Optional: check if cityOnly exists
-    const cityBlock = locations.find(loc => loc.locationsName === cityOnly);
-    if (cityBlock) {
-      const districts = cityBlock.location.map(loc => loc.locationName);
-      console.log(`🏘️ ${cityOnly} 所有地區:`, districts);
-    } else {
-      console.error(`❗ 找不到縣市 ${cityOnly}`);
-    }
-
-   
-
-    // Log all available city names
+    // 🧾 縣市清單
     console.log('📦 所有 locationsName:', locations.map(l => l.locationsName));
 
-    // Step 1: 找出縣市區塊
-    const allCityNames = locations.map(loc => loc.locationsName);
-    console.log('📦 所有縣市 from CWB:', allCityNames);
-
+    // 找縣市區塊
     const cityBlock = locations.find(loc => loc.locationsName === cityOnly);
     if (!cityBlock) {
       console.error(`❗ 找不到縣市 ${cityOnly}`);
       return null;
     }
 
-    if (cityBlock) {
-        const districtNames = cityBlock.location.map(loc => loc.locationName);
-        console.log(`📍 ${cityOnly} 下的所有地區:`, districtNames);
-    }
-      
-    if (!cityBlock) {
-      console.error(`❗ 找不到縣市 ${cityOnly}`);
-      return null;
-    }
+    const districtNames = cityBlock.location.map(loc => loc.locationName);
+    console.log(`🏘️ ${cityOnly} 所有地區:`, districtNames);
 
-    // Step 2: 找出鄉鎮區塊
+    // 找鄉鎮區塊
     const locationData = cityBlock.location.find(loc => loc.locationName === districtOnly);
     if (!locationData) {
       console.error(`❗ 找不到區鄉鎮 ${districtOnly} in ${cityOnly}`);
       return null;
     }
 
-    // Step 3: 抓出 Wx 時間資料
+    // 取天氣資料
     const times = locationData.weatherElement.find(el => el.elementName === 'Wx')?.time;
     if (!times || times.length < 3) {
       console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
       return null;
     }
 
-    // Step 4: 擷取預報
+    // 回傳早午晚資料
     const result = {
       morning: times[0].elementValue[0].value,
       afternoon: times[1].elementValue[0].value,
