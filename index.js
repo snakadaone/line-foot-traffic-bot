@@ -256,36 +256,36 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
     }
 }
 
-async function getWeatherForecast(cityOnly, districtOnly) {
-  const datasetMap = {
-    '宜蘭縣': 'F-D0047-001',
-    '桃園市': 'F-D0047-005',
-    '新竹縣': 'F-D0047-009',
-    '苗栗縣': 'F-D0047-013',
-    '彰化縣': 'F-D0047-017',
-    '南投縣': 'F-D0047-021',
-    '雲林縣': 'F-D0047-025',
-    '嘉義縣': 'F-D0047-029',
-    '屏東縣': 'F-D0047-033',
-    '臺東縣': 'F-D0047-037',
-    '花蓮縣': 'F-D0047-041',
-    '澎湖縣': 'F-D0047-045',
-    '基隆市': 'F-D0047-049',
-    '新竹市': 'F-D0047-053',
-    '嘉義市': 'F-D0047-057',
-    '臺北市': 'F-D0047-061',
-    '高雄市': 'F-D0047-065',
-    '新北市': 'F-D0047-069',
-    '臺中市': 'F-D0047-073',
-    '臺南市': 'F-D0047-077',
-    '連江縣': 'F-D0047-081',
-    '金門縣': 'F-D0047-085'
-  };
+const cityToDatasetId = {
+  '基隆市': 'F-D0047-049',
+  '臺北市': 'F-D0047-061',
+  '新北市': 'F-D0047-069',
+  '桃園市': 'F-D0047-005',
+  '新竹市': 'F-D0047-053',
+  '新竹縣': 'F-D0047-009',
+  '苗栗縣': 'F-D0047-013',
+  '臺中市': 'F-D0047-073',
+  '彰化縣': 'F-D0047-017',
+  '南投縣': 'F-D0047-021',
+  '雲林縣': 'F-D0047-025',
+  '嘉義市': 'F-D0047-057',
+  '嘉義縣': 'F-D0047-029',
+  '臺南市': 'F-D0047-077',
+  '高雄市': 'F-D0047-065',
+  '屏東縣': 'F-D0047-033',
+  '宜蘭縣': 'F-D0047-001',
+  '花蓮縣': 'F-D0047-041',
+  '臺東縣': 'F-D0047-037',
+  '澎湖縣': 'F-D0047-045',
+  '金門縣': 'F-D0047-085',
+  '連江縣': 'F-D0047-081'
+};
 
+async function getWeatherForecast(cityOnly, districtOnly) {
   try {
-    const datasetId = datasetMap[cityOnly];
+    const datasetId = cityToDatasetId[cityOnly];
     if (!datasetId) {
-      console.error(`❗ 找不到對應資料集代碼 for ${cityOnly}`);
+      console.error(`❗ 無對應的 datasetId for ${cityOnly}`);
       return null;
     }
 
@@ -293,11 +293,15 @@ async function getWeatherForecast(cityOnly, districtOnly) {
 
     const res = await axios.get(url);
 
-    const locations = res.data.records.location;
-    const locationData = locations.find(loc => loc.locationName === districtOnly);
+    const locations = res.data.records?.locations?.[0]?.location;
+    if (!locations) {
+      console.error(`❗ 無法取得 ${cityOnly} 的地區資料`);
+      return null;
+    }
 
+    const locationData = locations.find(loc => loc.locationName === districtOnly);
     if (!locationData) {
-      console.error(`❗ 找不到 ${districtOnly} in ${cityOnly}`);
+      console.error(`❗ 找不到區鄉鎮 ${districtOnly} in ${cityOnly}`);
       return null;
     }
 
@@ -307,18 +311,18 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       return null;
     }
 
-    const result = {
+    return {
       morning: times[0].elementValue[0].value,
       afternoon: times[1].elementValue[0].value,
       night: times[2].elementValue[0].value
     };
-
-    return result;
   } catch (error) {
     console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error.message);
     return null;
   }
 }
+
+
 
 
 
