@@ -63,7 +63,7 @@ app.post('/webhook', async (req, res) => {
   
     await replyText(
         event.replyToken,
-        `✅ 已收到您的位置！\n📍 您所在的城市是：${city}\n☀️ 白天：${weather.morning}\n🌆 下午：${weather.afternoon}\n🌙 晚上：${weather.night}\n\n請繼續輸入「設定營業時間」`
+        `✅ 已收到您的位置！\n📍 您所在的城市是：${cityOnly}\n☀️ 白天：${weather.morning}\n🌆 下午：${weather.afternoon}\n🌙 晚上：${weather.night}\n\n請繼續輸入「設定營業時間」`
       );
       
   }
