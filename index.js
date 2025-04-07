@@ -159,6 +159,8 @@ async function reverseGeocode(lat, lng) {
         }
       }
     }
+    console.log('🏙️ county:', county);
+    console.log('🏘️ district:', district);
 
     if (district && county) {
        // 只接受區／鎮／鄉等行政區，不要包含里名或太細的資料
@@ -168,7 +170,7 @@ async function reverseGeocode(lat, lng) {
     }
 
     return null;
-    
+
   } catch (error) {
     console.error('❗ reverseGeocode 錯誤:', error.response?.data || error);
     return null;
