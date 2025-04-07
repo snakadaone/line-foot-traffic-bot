@@ -151,20 +151,27 @@ async function reverseGeocode(lat, lng) {
 
     for (const result of results) {
       for (const comp of result.address_components) {
-        if (comp.types.includes('administrative_area_level_3') && /[區鎮鄉]$/.test(comp.long_name)) {
-            // ✅ Only accept township-level districts like 三峽區
-            district = comp.long_name;
-          }
-          
-        if (
-          comp.types.includes('administrative_area_level_1') ||
-          comp.types.includes('administrative_area_level_2')
-        ) {
-          // 🏙️ County/City
-          county = comp.long_name;
+        const name = comp.long_name;
+      
+        if (!district && comp.types.includes('administrative_area_level_3') && /(區|鎮|鄉)$/.test(name)) {
+          district = name;
         }
-      }
+      
+        if (!county && (
+          comp.types.includes('administrative_area_level_2') || 
+          comp.types.includes('administrative_area_level_1'))
+        ) {
+            county = name;
+        }
+      
+        // ✅ Once both found, break inner loop
+        if (district && county) break;
+        }
+      
+        // ✅ Break outer loop too
+        if (district && county) break;
     }
+      
 
     console.log('🏙️ county:', county);
     console.log('🏘️ district:', district);
