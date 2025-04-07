@@ -239,24 +239,36 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
       console.error('❗ quickReply 發生錯誤：', error.response?.data || error);
     }
   }
-async function getWeatherForecast(districtName) {
+async function getWeatherForecast(fullDistrictName) {
   try {
-    const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-D0047-093?Authorization=${process.env.CWB_API_KEY}&format=JSON&locationName=${encodeURIComponent(districtName)}`;
+    const districtOnly = fullDistrictName.replace(/^(.*?[市縣])/, ''); // Remove 新北市 → 三峽區
+    const cityOnly = fullDistrictName.match(/^(.*?[市縣])/)[1];        // Extract 新北市
+
+    const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-D0047-093?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
 
     const res = await axios.get(url);
-    const locationData = res.data.records.locations[0].location[0];
 
-    const times = locationData.weatherElement.find(el => el.elementName === 'Wx').time;
+    const locations = res.data.records.locations;
+    const cityBlock = locations.find(loc => loc.locationsName === cityOnly);
 
-    // We'll grab 3 segments: morning, afternoon, night
-    const morning = times[0];   // 06:00–12:00
-    const afternoon = times[1]; // 12:00–18:00
-    const night = times[2];     // 18:00–00:00
+    if (!cityBlock) {
+      console.error('❗ 找不到縣市區塊:', cityOnly);
+      return null;
+    }
+
+    const location = cityBlock.location.find(loc => loc.locationName === districtOnly);
+
+    if (!location) {
+      console.error('❗ 找不到行政區資料:', districtOnly);
+      return null;
+    }
+
+    const times = location.weatherElement.find(el => el.elementName === 'Wx').time;
 
     const result = {
-      morning: morning.elementValue[0].value,
-      afternoon: afternoon.elementValue[0].value,
-      night: night.elementValue[0].value
+      morning: times[0].elementValue[0].value,
+      afternoon: times[1].elementValue[0].value,
+      night: times[2].elementValue[0].value
     };
 
     return result;
