@@ -67,7 +67,7 @@ app.post('/webhook', async (req, res) => {
   
     // 🔍 取得地區屬性
     console.log('🔎 正在查詢地區屬性資料 for:', `${cityOnly}${districtOnly}`);
-    const profile = getDistrictProfile(`${cityOnly}${districtOnly}`);
+    const profile = getDistrictProfile(cityOnly, districtOnly);
     const profileText = profile
       ? `🧭 地區屬性：${profile.type}\n📌 ${profile.features.join('\n📌 ')}`
       : '⚠️ 尚未收錄此區域的屬性資料';
