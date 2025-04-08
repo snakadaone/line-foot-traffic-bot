@@ -7,6 +7,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
 const port = process.env.PORT || 3000;
+const districtProfiles = require('./data/district_profiles.json');
 
 
 
@@ -342,6 +343,11 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error.message);
     return null;
   }
+}
+
+function getDistrictProfile(city, district) {
+  const key = `${city}${district}`;
+  return districtProfiles[key] || null;
 }
 
 
