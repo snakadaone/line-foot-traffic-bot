@@ -62,10 +62,18 @@ app.post('/webhook', async (req, res) => {
     };
       
   
+    // 🔍 取得地區屬性
+    console.log('🔎 正在查詢地區屬性資料 for:', `${cityOnly}${districtOnly}`);
+    const profile = getDistrictProfile(`${cityOnly}${districtOnly}`);
+    const profileText = profile
+      ? `🧭 地區屬性：${profile.type}\n📌 ${profile.features.join('\n📌 ')}`
+      : '⚠️ 尚未收錄此區域的屬性資料';
+
     await replyText(
-        event.replyToken,
-        `✅ 已收到您的位置！\n📍 您所在的城市是：${cityOnly}\n☀️ 白天：${weather.morning}\n🌆 下午：${weather.afternoon}\n🌙 晚上：${weather.night}\n\n請繼續輸入「設定營業時間」`
-      );
+      event.replyToken,
+      `✅ 已收到您的位置！\n📍 您所在的城市是：${cityOnly}\n☀️ 白天：${weather.morning}\n🌆 下午：${weather.afternoon}\n🌙 晚上：${weather.night}\n\n${profileText}\n\n請繼續輸入「設定營業時間」`
+);
+
       
   }
   
