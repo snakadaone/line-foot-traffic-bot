@@ -45,8 +45,9 @@ app.post('/webhook', async (req, res) => {
     console.log('🔍 cityOnly:', cityOnly);
     console.log('🔍 districtOnly:', districtOnly);
 
-    const weather = await getWeatherForecast(cityOnly, districtOnly);
-
+    const normalizedCity = normalizeCityName(cityOnly);
+    const weather = await getWeatherForecast(normalizedCity, districtOnly);
+    
     if (!weather) {
       await replyText(event.replyToken, '⚠️ 無法取得天氣預報，請稍後再試。');
       return;
@@ -255,6 +256,9 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
     } catch (error) {
       console.error('❗ quickReply 發生錯誤：', error.response?.data || error);
     }
+}
+function normalizeCityName(name) {
+  return name.replace(/^台/, '臺'); // 把台北市改成臺北市
 }
 
 const cityToDatasetId = {
