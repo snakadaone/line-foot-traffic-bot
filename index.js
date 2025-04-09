@@ -56,7 +56,7 @@ app.post('/webhook', async (req, res) => {
       ...userState[userId],
       location: { lat: latitude, lng: longitude },
       city: cityOnly,
-      weather  
+      weather,  
       districtOnly,
     };
       
