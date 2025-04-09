@@ -50,20 +50,21 @@ app.post('/webhook', async (req, res) => {
 
     const normalizedCity = normalizeCityName(cityOnly);
     const weather = await getWeatherForecast(normalizedCity, districtOnly);
-    
-    // ✅ Save to userState
+
+    if (!weather) {
+      await replyText(event.replyToken, '⚠️ 無法取得天氣預報，請稍後再試。');
+      return;
+    }
+
+    // ✅ Save to userState AFTER confirming weather is valid
     userState[userId] = {
       ...userState[userId],
       location: { lat: latitude, lng: longitude },
       city: cityOnly,
-      weather,  
-      districtOnly,
+      weather,
+      districtOnly
     };
-      
-    if (!weather) {
-      await replyText(event.replyToken, '⚠️ 無法取得天氣預報，請稍後再試。');
-      return;
-}
+
 
     
   
@@ -112,11 +113,17 @@ app.post('/webhook', async (req, res) => {
       await replyConfirmTime(event.replyToken, start, end);
       const currentDate = new Date();
       const holidayMap = require('./data/2025_holidays.json');
-      const { dayType, boostTomorrowHoliday } = analyzeDayType(currentDate, holidayMap);
 
       const city = userState[userId]?.city;
       const district = userState[userId]?.districtOnly;
       const weather = userState[userId]?.weather;
+
+      if (!city || !district || !weather) {
+        await replyText(event.replyToken, '⚠️ 找不到完整的地區或天氣資料，請重新傳送位置再設定一次營業時間。');
+        return;
+      }
+
+      const { dayType, boostTomorrowHoliday } = analyzeDayType(currentDate, holidayMap);
       const profile = getDistrictProfile(city, district);
 
       const prediction = predictFootTraffic({
@@ -126,9 +133,9 @@ app.post('/webhook', async (req, res) => {
         start,
         end,
         boostTomorrowHoliday
-});
+      });
 
-await replyText(event.replyToken, prediction);
+      await replyText(event.replyToken, prediction);
 
     }
   }
