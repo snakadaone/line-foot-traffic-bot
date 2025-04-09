@@ -51,11 +51,6 @@ app.post('/webhook', async (req, res) => {
     const normalizedCity = normalizeCityName(cityOnly);
     const weather = await getWeatherForecast(normalizedCity, districtOnly);
     
-    if (!weather) {
-      await replyText(event.replyToken, '⚠️ 無法取得天氣預報，請稍後再試。');
-      return;
-}
-
     // ✅ Save to userState
     userState[userId] = {
       ...userState[userId],
@@ -65,6 +60,12 @@ app.post('/webhook', async (req, res) => {
       districtOnly,
     };
       
+    if (!weather) {
+      await replyText(event.replyToken, '⚠️ 無法取得天氣預報，請稍後再試。');
+      return;
+}
+
+    
   
     // 🔍 取得地區屬性
     console.log('🔎 正在查詢地區屬性資料 for:', `${cityOnly}${districtOnly}`);
