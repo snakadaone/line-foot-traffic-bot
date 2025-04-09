@@ -174,8 +174,11 @@ app.post('/webhook', async (req, res) => {
       await replyText(event.replyToken, '⚠️ 無法確認設定，請重新操作一次。');
     }
   } else if (text === '重新設定') {
-    userState[userId] = { step: 'start' };
-    await sendTimeQuickReply(event.replyToken, '請重新選擇營業開始時間：', 'start');
+    userState[userId] = {
+      ...userState[userId], // ✅ keep location, city, district, weather!
+      step: 'start'
+    };
+    await sendTimeQuickReply(event.replyToken, '請選擇營業開始時間：', 'start', 'first');
   }
   
   // 其他訊息
