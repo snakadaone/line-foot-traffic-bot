@@ -134,6 +134,7 @@ app.post('/webhook', async (req, res) => {
         end,
         boostTomorrowHoliday
       });
+      console.log('📤 人流預測訊息：', prediction);
 
       await replyText(event.replyToken, prediction);
 
@@ -190,7 +191,7 @@ async function replyText(replyToken, text) {
     messages: [{ type: 'text', text }]
   };
   console.log('📤 回傳訊息內容：', body);
-  
+
   await axios.post(url, body, { headers });
 }
 const { Client } = require('@googlemaps/google-maps-services-js');
