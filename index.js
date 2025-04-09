@@ -199,6 +199,10 @@ async function replyText(replyToken, text) {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`
   };
+
+  // ✅ Sanitize message text to avoid LINE API 400 error
+  text = text.normalize('NFKC').replace(/\u200B/g, '').trim();
+  
   const body = {
     replyToken,
     messages: [{ type: 'text', text }]
