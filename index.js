@@ -506,15 +506,16 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
   let level = '';
   let suggestion = '';
   if (score >= 4) {
-    level = '高';
-    suggestion = '準備衝爆！多備貨';
+    level = '🔥 高';
+    suggestion = '準備衝爆！多備貨 💪';
   } else if (score >= 2) {
-    level = '中';
-    suggestion = '人潮普通，維持日常備貨';
+    level = '🌤 中';
+    suggestion = '人潮普通，維持日常備貨 😌';
   } else {
-    level = '低';
-    suggestion = '擺爛 day，備少一點省成本 ';
+    level = '😴 低';
+    suggestion = '擺爛 day，備少一點省成本 🛋️';
   }
+  
 
   return `擺攤補給指南\n👉 今日人流預測：${level}\n🧠 根據 ${dayType}、區域「${type}」、天氣、營業時間分析\n建議：${suggestion}`;
 }
