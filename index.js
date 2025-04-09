@@ -87,9 +87,13 @@ app.post('/webhook', async (req, res) => {
 
   // 使用者輸入：設定營業時間
   else if (text === '設定營業時間') {
-    userState[userId] = { step: 'start' };
+    userState[userId] = {
+      ...userState[userId], // ✅ preserve city, district, weather
+      step: 'start'
+    };
     await sendTimeQuickReply(event.replyToken, '請選擇營業開始時間：', 'start', 'first');
   }
+  
   else if (text === '查看更多開始時間') {
     await sendTimeQuickReply(event.replyToken, '請選擇營業開始時間：', 'start', 'second');
   }
