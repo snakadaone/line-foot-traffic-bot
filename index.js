@@ -508,7 +508,7 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
     level = '🌤 中';
     suggestion = '人潮普通，維持日常備貨 😌';
   } else {
-    level = '💤 低';
+    level = '😴 低';
     suggestion = '擺爛 day，備少一點省成本 ';
   }
 
