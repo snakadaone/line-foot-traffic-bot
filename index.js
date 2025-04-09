@@ -205,6 +205,7 @@ async function replyText(replyToken, text) {
   };
 
   console.log('📤 回傳訊息內容：', JSON.stringify(body, null, 2));
+  console.log('📏 回傳訊息長度:', body.messages[0].text.length);
 
   await axios.post(url, body, { headers });
 }
