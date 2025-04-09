@@ -189,6 +189,8 @@ async function replyText(replyToken, text) {
     replyToken,
     messages: [{ type: 'text', text }]
   };
+  console.log('📤 回傳訊息內容：', body);
+  
   await axios.post(url, body, { headers });
 }
 const { Client } = require('@googlemaps/google-maps-services-js');
