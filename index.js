@@ -62,7 +62,7 @@ app.post('/webhook', async (req, res) => {
       location: { lat: latitude, lng: longitude },
       city: cityOnly,
       weather,
-      districtOnly
+      districtOnly,
     };
 
 
