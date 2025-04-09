@@ -204,7 +204,7 @@ async function replyText(replyToken, text) {
     messages: [{ type: 'text', text }]
   };
 
-  cconsole.log('📤 回傳訊息內容：', JSON.stringify(body, null, 2));
+  console.log('📤 回傳訊息內容：', JSON.stringify(body, null, 2));
 
   await axios.post(url, body, { headers });
 }
