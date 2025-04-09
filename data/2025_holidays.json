@@ -1,0 +1,10 @@
+{
+    "2025-01-01": { "status": "holiday", "note": "元旦" },
+    "2025-02-28": { "status": "holiday", "note": "和平紀念日" },
+    "2025-04-04": { "status": "holiday", "note": "兒童節" },
+    "2025-04-05": { "status": "holiday", "note": "清明節" },
+    "2025-04-06": { "status": "holiday", "note": "連假最後一天" },
+    "2025-06-06": { "status": "holiday", "note": "端午節" },
+    "2025-09-28": { "status": "makeupWorkday", "note": "補班日" }
+  }
+  

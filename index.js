@@ -61,7 +61,8 @@ app.post('/webhook', async (req, res) => {
       ...userState[userId],
       location: { lat: latitude, lng: longitude },
       city: cityOnly,
-      weather  // ← new addition
+      weather  
+      districtOnly,
     };
       
   
@@ -108,6 +109,26 @@ app.post('/webhook', async (req, res) => {
       userState[userId].end = label;
       const { start, end } = userState[userId];
       await replyConfirmTime(event.replyToken, start, end);
+      const currentDate = new Date();
+      const holidayMap = require('./data/2025_holidays.json');
+      const { dayType, boostTomorrowHoliday } = analyzeDayType(currentDate, holidayMap);
+
+      const city = userState[userId]?.city;
+      const district = userState[userId]?.districtOnly;
+      const weather = userState[userId]?.weather;
+      const profile = getDistrictProfile(city, district);
+
+      const prediction = predictFootTraffic({
+        districtProfile: profile,
+        dayType,
+        weather,
+        start,
+        end,
+        boostTomorrowHoliday
+});
+
+await replyText(event.replyToken, prediction);
+
     }
   }
 
@@ -392,7 +413,83 @@ async function replyConfirmTime(replyToken, start, end) {
   
     await axios.post(url, body, { headers });
   }
-  
+
+  function formatDate(date) {
+  return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+}
+
+function analyzeDayType(today, holidayMap) {
+  const todayStr = formatDate(today);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const tomorrowStr = formatDate(tomorrow);
+
+  const todayInfo = holidayMap[todayStr] || {};
+  const tomorrowInfo = holidayMap[tomorrowStr] || {};
+
+  const isTodayWeekend = today.getDay() === 0 || today.getDay() === 6;
+  const isTomorrowHoliday = tomorrowInfo.status === 'holiday';
+
+  const boostTomorrowHoliday = isTomorrowHoliday ? 1 : 0;
+
+  const dayType =
+    todayInfo.status === 'holiday' ? 'holiday' :
+    todayInfo.status === 'makeupWorkday' ? 'makeupWorkday' :
+    isTodayWeekend ? 'weekend' : 'workday';
+
+  return {
+    dayType,
+    note: todayInfo.note || null,
+    boostTomorrowHoliday
+  };
+}
+
+function predictFootTraffic({ districtProfile, dayType, weather, start, end, boostTomorrowHoliday }) {
+  const type = districtProfile?.type || '未知';
+  const features = districtProfile?.features || [];
+
+  let score = 0;
+
+  // 🎯 區域類型
+  if (type.includes('觀光')) score += 2;
+  if (type.includes('商業')) score += 1;
+  if (type.includes('學區')) score += (dayType === 'workday' ? 1 : -1);
+
+  // 🗓️ 今天是週末/假日就加分
+  if (dayType === 'weekend' || dayType === 'holiday') score += 2;
+  if (dayType === 'makeupWorkday') score -= 1;
+
+  // 🎁 明天放假，今天加分
+  if (boostTomorrowHoliday) score += 1;
+
+  // 🌧️ 天氣扣分
+  const badWeather = [weather.morning, weather.afternoon, weather.night]
+    .filter(w => w.includes('雨') || w.includes('雷') || w.includes('風'))
+    .length;
+  score -= badWeather;
+
+  // 🕒 時段加分
+  const startHour = parseInt(start);
+  const endHour = parseInt(end);
+  if (startHour >= 10 && endHour >= 18) score += 1;
+
+  let level = '';
+  let suggestion = '';
+  if (score >= 4) {
+    level = '🔥 高';
+    suggestion = '準備衝爆！多備貨 💪';
+  } else if (score >= 2) {
+    level = '🌤 中';
+    suggestion = '人潮普通，維持日常備貨 😌';
+  } else {
+    level = '💤 低';
+    suggestion = '擺爛 day，備少一點省成本 🛋️';
+  }
+
+  return `📦 擺攤補給指南\n👉 今日人流預測：${level}\n🧠 根據 ${dayType}、區域「${type}」、天氣、營業時間分析\n建議：${suggestion}`;
+}
+
+
 app.listen(port, () => {
   console.log(`🚀 LINE Bot 已啟動：埠號 ${port}`);
 });
