@@ -200,22 +200,13 @@ async function replyText(replyToken, text) {
     'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`
   };
 
-  // 🧹 Clean up text to avoid LINE API 400 error
+  // 💡 Sanitize ALL invisible/broken characters
   text = text
-  .normalize('NFKC')
-  .replace(/[\u200B\u200C\u200D\uFEFF]/g, '') // remove zero-width
-  .replace(/[ \t]+\n/g, '\n')                 // trim line-ending spaces
-  .replace(/\n[ \t]+/g, '\n')                 // trim line-starting spaces
-  .replace(/[^\S\r\n]+/g, ' ')                // replace other invisible spaces
-  .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '') // strip lone high surrogate
-  .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '') // strip lone low surrogate
-  .trim();
+    .normalize('NFKC')         // Normalize emoji + punctuation
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') // Remove zero-width + non-breaking spaces
+    .replace(/[^\S\r\n]+/g, ' ') // Convert weird spacing to regular space
+    .trim();
 
-    
-    console.log('🔤 Message char codes:', [...text].map(c => c.charCodeAt(0)));
-
-
-  
   const body = {
     replyToken,
     messages: [{ type: 'text', text }]
@@ -226,6 +217,7 @@ async function replyText(replyToken, text) {
 
   await axios.post(url, body, { headers });
 }
+
 const { Client } = require('@googlemaps/google-maps-services-js');
 const googleClient = new Client({});
 
