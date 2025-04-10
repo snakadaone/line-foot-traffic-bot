@@ -522,7 +522,7 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
     level = '🔥 高';
     suggestion = '準備衝爆！多備貨 💪';
   } else if (score >= 2) {
-    level = '🌤 中';
+    level = '☀️ 中';
     suggestion = '人潮普通，維持日常備貨 😌';
   } else {
     level = '😴 低';
