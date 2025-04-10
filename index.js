@@ -202,12 +202,15 @@ async function replyText(replyToken, text) {
 
   // 🧹 Clean up text to avoid LINE API 400 error
   text = text
-    .normalize('NFKC')
-    .replace(/[\u200B\u200C\u200D\uFEFF]/g, '')  // zero-width
-    .replace(/[ \t]+\n/g, '\n')                  // trim line-ending spaces
-    .replace(/\n[ \t]+/g, '\n')                  // trim line-starting spaces
-    .replace(/[^\S\r\n]+/g, ' ')                 // replace other invisible spaces
-    .trim();
+  .normalize('NFKC')
+  .replace(/[\u200B\u200C\u200D\uFEFF]/g, '') // remove zero-width
+  .replace(/[ \t]+\n/g, '\n')                 // trim line-ending spaces
+  .replace(/\n[ \t]+/g, '\n')                 // trim line-starting spaces
+  .replace(/[^\S\r\n]+/g, ' ')                // replace other invisible spaces
+  .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '') // strip lone high surrogate
+  .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '') // strip lone low surrogate
+  .trim();
+
     
     console.log('🔤 Message char codes:', [...text].map(c => c.charCodeAt(0)));
 
