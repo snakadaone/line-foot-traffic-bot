@@ -200,15 +200,15 @@ async function replyText(replyToken, text) {
     'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`
   };
 
-  // ✅ Sanitize message text to avoid LINE API 400 error
+  // ✅ Sanitize: normalize, remove zero-width spaces, collapse newlines, trim
   text = text
-  .normalize('NFKC')             // Normalize unicode
-  .replace(/\u200B/g, '')        // Remove zero-width space
-  .replace(/[^\S\r\n]+/g, ' ')   // Convert weird spacing
-  .replace(/\n+/g, '\n')         // Collapse multiple newlines
-  .trim();
+    .normalize('NFKC')            // Normalize unicode
+    .replace(/\u200B/g, '')       // Remove zero-width space
+    .replace(/[^\S\r\n]+/g, ' ')  // Convert weird spacing
+    .replace(/[^\x00-\x7F\u4E00-\u9FFF\u3000-\u303F\uFF00-\uFFEF\n\r.,!?()\[\]{}<>:;'"%&$@#^+=*/~`|\\-]/g, '') // Remove unsupported chars
+    .replace(/\n+/g, '\n')
+    .trim();
 
-  
   const body = {
     replyToken,
     messages: [{ type: 'text', text }]
@@ -219,6 +219,7 @@ async function replyText(replyToken, text) {
 
   await axios.post(url, body, { headers });
 }
+
 const { Client } = require('@googlemaps/google-maps-services-js');
 const googleClient = new Client({});
 
@@ -523,7 +524,7 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
   }
   
 
-  return `擺攤補給指南\n👉 今日人流預測：${level}\n🧠 根據 ${dayType}、區域「${type}」、天氣、營業時間分析\n建議：${suggestion}`;
+  return `📦 擺攤補給指南\n👉 今日人流預測：${level}\n🧠 根據 ${dayType}、區域「${type}」、天氣、營業時間分析\n建議：${suggestion}`;
 }
 
 
