@@ -201,7 +201,13 @@ async function replyText(replyToken, text) {
   };
 
   // ✅ Sanitize message text to avoid LINE API 400 error
-  text = text.normalize('NFKC').replace(/\u200B/g, '').trim();
+  text = text
+  .normalize('NFKC')             // Normalize unicode
+  .replace(/\u200B/g, '')        // Remove zero-width space
+  .replace(/[^\S\r\n]+/g, ' ')   // Convert weird spacing
+  .replace(/\n+/g, '\n')         // Collapse multiple newlines
+  .trim();
+
   
   const body = {
     replyToken,
