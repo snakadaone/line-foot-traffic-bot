@@ -202,10 +202,12 @@ async function replyText(replyToken, text) {
 
   // 💡 Sanitize ALL invisible/broken characters
   text = text
-    .normalize('NFKC')         // Normalize emoji + punctuation
-    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') // Remove zero-width + non-breaking spaces
-    .replace(/[^\S\r\n]+/g, ' ') // Convert weird spacing to regular space
-    .trim();
+  .normalize('NFKC')
+  .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') // remove invisible chars
+  .replace(/[：]/g, ':')                       // full-width colon → normal colon
+  .replace(/[^\S\r\n]+/g, ' ')                 // normalize spacing
+  .trim();
+
 
   const body = {
     replyToken,
