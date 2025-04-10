@@ -200,13 +200,17 @@ async function replyText(replyToken, text) {
     'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`
   };
 
-  // ✅ Sanitize message text to avoid LINE API 400 error
+  // 🧹 Clean up text to avoid LINE API 400 error
   text = text
-  .normalize('NFKC')             // Normalize unicode
-  .replace(/\u200B/g, '')        // Remove zero-width space
-  .replace(/[^\S\r\n]+/g, ' ')   // Convert weird spacing
-  .replace(/\n+/g, '\n')         // Collapse multiple newlines
-  .trim();
+    .normalize('NFKC')
+    .replace(/[\u200B\u200C\u200D\uFEFF]/g, '')  // zero-width
+    .replace(/[ \t]+\n/g, '\n')                  // trim line-ending spaces
+    .replace(/\n[ \t]+/g, '\n')                  // trim line-starting spaces
+    .replace(/[^\S\r\n]+/g, ' ')                 // replace other invisible spaces
+    .trim();
+    
+    console.log('🔤 Message char codes:', [...text].map(c => c.charCodeAt(0)));
+
 
   
   const body = {
