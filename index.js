@@ -207,6 +207,7 @@ async function replyText(replyToken, text) {
   .replace(/：/g, ':')                           // replace full-width colon
   .replace(/[「」]/g, '"')                       // replace CJK quotes with "
   .replace(/[^\S\r\n]+/g, ' ')                   // collapse spacing
+  .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '') // remove surrogate-pair emojis
   .trim();
 
 
