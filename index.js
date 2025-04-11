@@ -203,10 +203,12 @@ async function replyText(replyToken, text) {
   // 💡 Sanitize ALL invisible/broken characters
   text = text
   .normalize('NFKC')
-  .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') // remove zero-width & nbsp
-  .replace(/:/g, ':')                         // replace full-width colon
+  .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') // remove invisible junk
+  .replace(/:/g, ':')                         // full-width colon to ASCII colon
+  .replace(/[「」]/g, '"')                     // optional: standardize quotes
   .replace(/[^\S\r\n]+/g, ' ')                 // collapse excessive spacing
   .trim();
+
 
   console.log('🔤 Char codes:', [...text].map(c => c.charCodeAt(0)));
 
