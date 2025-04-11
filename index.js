@@ -531,9 +531,9 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
   return [
     '📦 擺攤補給指南',
     `👉 今日人流預測：${level}`,
-    `🧠 根據 ${dayType}、區域「${type}」、天氣、營業時間分析,
-    `建議：${suggestion}`
+    `🧠 根據 ${dayType}、區域「${type}」、天氣、營業時間分析，建議：${suggestion}`
   ].join('\n');
+  
 }
 
 
