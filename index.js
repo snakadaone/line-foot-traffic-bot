@@ -203,12 +203,12 @@ async function replyText(replyToken, text) {
   // 💡 Sanitize ALL invisible/broken characters
   text = text
   .normalize('NFKC')
-  .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')   // remove zero-width + nbsp
-  .replace(/：/g, ':')                           // replace full-width colon
-  .replace(/[「」]/g, '"')                       // replace CJK quotes with "
-  .replace(/[^\S\r\n]+/g, ' ')                   // collapse spacing
-  .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '') // remove surrogate-pair emojis
+  .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') // remove zero-width & nbsp
+  .replace(/：/g, ':')                         // replace full-width colon
+  .replace(/[「」]/g, '"')                     // replace CJK quotes
+  .replace(/[^\S\r\n]+/g, ' ')                 // collapse excessive spacing
   .trim();
+
 
 
   const body = {
