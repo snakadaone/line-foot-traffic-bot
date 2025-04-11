@@ -115,6 +115,10 @@ app.post('/webhook', async (req, res) => {
       userState[userId].end = label;
       const { start, end } = userState[userId];
       await replyConfirmTime(event.replyToken, start, end); // ✅ replyToken used here
+      await replyText(event.replyToken, `✅ 營業時間確認完成!\n${start} ~ ${end}`);
+      await pushText(userId, prediction.trim());
+
+
 
       const city = userState[userId]?.city;
       const district = userState[userId]?.districtOnly;
@@ -139,10 +143,6 @@ app.post('/webhook', async (req, res) => {
         boostTomorrowHoliday
       });
       console.log('📤 人流預測訊息：', prediction);
-      await replyText(event.replyToken, `✅ 營業時間確認完成!\n${start} ~ ${end}`);
-
-
-      await pushText(userId, prediction.trim()); // ✅ push as separate message
 
     }
   }
