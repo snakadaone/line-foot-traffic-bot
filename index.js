@@ -114,25 +114,25 @@ app.post('/webhook', async (req, res) => {
     } else if (userState[userId]?.step === 'end') {
       userState[userId].end = label;
       const { start, end } = userState[userId];
-      await replyConfirmTime(event.replyToken, start, end); // ✅ replyToken used here
-      await replyText(event.replyToken, `✅ 營業時間確認完成!\n${start} ~ ${end}`);
-
-
-
+      
+      // ✅ 1. Confirm hours via reply
+      await replyConfirmTime(event.replyToken, start, end); // consumes replyToken
+      
+      // ✅ 2. Calculate prediction
       const city = userState[userId]?.city;
       const district = userState[userId]?.districtOnly;
       const weather = userState[userId]?.weather;
-
+      
       if (!city || !district || !weather) {
         await pushText(userId, '⚠️ 找不到完整的地區或天氣資料，請重新傳送位置再設定一次營業時間。');
         return;
       }
-
+      
       const currentDate = new Date();
       const holidayMap = require('./data/2025_holidays.json');
       const { dayType, boostTomorrowHoliday } = analyzeDayType(currentDate, holidayMap);
       const profile = getDistrictProfile(city, district);
-
+      
       const prediction = predictFootTraffic({
         districtProfile: profile,
         dayType,
@@ -141,11 +141,13 @@ app.post('/webhook', async (req, res) => {
         end,
         boostTomorrowHoliday
       });
+      
       console.log('📤 人流預測訊息：', prediction);
+      
+      // ✅ 3. Push prediction message (separately)
       await pushText(userId, prediction.trim());
-
-
     }
+      
   }
 
   // 初始歡迎訊息
