@@ -529,7 +529,7 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
   }
 
   // ✅ Simplified LINE-safe return
-  return `擺攤預測 - 等級：${level}\n建議:${suggestion}`;
+  return `擺攤預測 - 等級: ${level}\n建議: ${suggestion}`;
 
 }
 
