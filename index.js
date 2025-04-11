@@ -156,7 +156,7 @@ app.post('/webhook', async (req, res) => {
     await replyText(event.replyToken, `👋 歡迎使用人流預測機器人！
 
 請依下列步驟完成設定：
-1️⃣ 傳送您的地點（使用 LINE「位置訊息」功能）
+1️⃣ 傳送您的地點（使用 LINE「位置訊息」功能)
 2️⃣ 輸入「設定營業時間」並選擇時間`);
   }
   else if (text === '確認營業時間') {
@@ -204,7 +204,7 @@ async function replyText(replyToken, text) {
   text = text
   .normalize('NFKC')
   .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') // remove zero-width & nbsp
-  .replace(/：/g, ':')                         // replace full-width colon
+  .replace(/:/g, ':')                         // replace full-width colon
   .replace(/[^\S\r\n]+/g, ' ')                 // collapse excessive spacing
   .trim();
 
@@ -426,7 +426,7 @@ async function replyConfirmTime(replyToken, start, end) {
       messages: [
         {
           type: 'text',
-          text: `✅ 營業時間已設定為：\n${start} ~ ${end}\n請確認或重新設定：`,
+          text: `✅ 營業時間已設定為：\n${start} ~ ${end}\n請確認或重新設定:`,
           quickReply: {
             items: [
               {
@@ -523,11 +523,12 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
     suggestion = '人潮普通，維持日常備貨 😌';
   } else {
     level = '😴 低';
-    suggestion = '擺爛 day，備少一點省成本 🛋️';
+    suggestion = '擺爛 day,備少一點省成本 🛋️';
   }
 
   // ✅ Simplified LINE-safe return
-  return `📢 擺攤預測：${level}\n💡 建議：${suggestion}`;
+  return `擺攤預測 - 等級：${level}\n建議:${suggestion}`;
+
 }
 
 
