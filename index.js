@@ -205,7 +205,6 @@ async function replyText(replyToken, text) {
   .normalize('NFKC')
   .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') // remove zero-width & nbsp
   .replace(/：/g, ':')                         // replace full-width colon
-  .replace(/[「」]/g, '"')                     // replace CJK quotes
   .replace(/[^\S\r\n]+/g, ' ')                 // collapse excessive spacing
   .trim();
 
@@ -531,8 +530,10 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
   return [
     '📦 擺攤補給指南',
     `👉 今日人流預測：${level}`,
-    `🧠 根據 ${dayType}、區域「${type}」、天氣、營業時間分析，建議：${suggestion}`
+    `🧠 根據 ${dayType}、區域「${type}」、天氣、營業時間分析，`,
+    `建議：${suggestion}`
   ].join('\n');
+  
   
 }
 
