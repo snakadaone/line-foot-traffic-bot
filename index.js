@@ -208,7 +208,7 @@ async function replyText(replyToken, text) {
   .replace(/[^\S\r\n]+/g, ' ')                 // collapse excessive spacing
   .trim();
 
-
+  console.log('🔤 Char codes:', [...text].map(c => c.charCodeAt(0)));
 
   const body = {
     replyToken,
