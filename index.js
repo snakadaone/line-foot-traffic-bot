@@ -114,25 +114,19 @@ app.post('/webhook', async (req, res) => {
     } else if (userState[userId]?.step === 'end') {
       userState[userId].end = label;
       const { start, end } = userState[userId];
-      await replyConfirmTime(event.replyToken, start, end);
-      const currentDate = new Date();
-      const holidayMap = require('./data/2025_holidays.json');
+      await replyConfirmTime(event.replyToken, start, end); // ✅ replyToken used here
 
       const city = userState[userId]?.city;
       const district = userState[userId]?.districtOnly;
       const weather = userState[userId]?.weather;
 
-      // 🔍 Add this block for debugging
-      console.log('🔍 DEBUG userState:', JSON.stringify(userState[userId], null, 2));
-      console.log('🔍 Checking for city:', city);
-      console.log('🔍 Checking for districtOnly:', district);
-      console.log('🔍 Checking for weather:', weather);
-
       if (!city || !district || !weather) {
-        await replyText(event.replyToken, '⚠️ 找不到完整的地區或天氣資料，請重新傳送位置再設定一次營業時間。');
+        await pushText(userId, '⚠️ 找不到完整的地區或天氣資料，請重新傳送位置再設定一次營業時間。');
         return;
       }
 
+      const currentDate = new Date();
+      const holidayMap = require('./data/2025_holidays.json');
       const { dayType, boostTomorrowHoliday } = analyzeDayType(currentDate, holidayMap);
       const profile = getDistrictProfile(city, district);
 
@@ -146,7 +140,7 @@ app.post('/webhook', async (req, res) => {
       });
       console.log('📤 人流預測訊息：', prediction);
 
-      await replyText(event.replyToken, prediction.trim());
+      await pushText(userId, prediction.trim()); // ✅ push as separate message
 
     }
   }
