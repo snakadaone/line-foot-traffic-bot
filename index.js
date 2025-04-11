@@ -203,9 +203,10 @@ async function replyText(replyToken, text) {
   // 💡 Sanitize ALL invisible/broken characters
   text = text
   .normalize('NFKC')
-  .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') // remove invisible chars
-  .replace(/[：]/g, ':')                       // full-width colon → normal colon
-  .replace(/[^\S\r\n]+/g, ' ')                 // normalize spacing
+  .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')   // remove zero-width + nbsp
+  .replace(/：/g, ':')                           // replace full-width colon
+  .replace(/[「」]/g, '"')                       // replace CJK quotes with "
+  .replace(/[^\S\r\n]+/g, ' ')                   // collapse spacing
   .trim();
 
 
@@ -214,8 +215,10 @@ async function replyText(replyToken, text) {
     messages: [{ type: 'text', text }]
   };
 
+  console.log('🧪 Cleaned text:', JSON.stringify(text));
   console.log('📤 回傳訊息內容：', JSON.stringify(body, null, 2));
   console.log('📏 回傳訊息長度:', body.messages[0].text.length);
+  
 
   await axios.post(url, body, { headers });
 }
