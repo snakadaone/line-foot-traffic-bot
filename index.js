@@ -219,6 +219,32 @@ async function replyText(replyToken, text) {
   await axios.post(url, body, { headers });
 }
 
+// ✅ Send a push message (not using replyToken)
+async function pushText(userId, text) {
+  const url = 'https://api.line.me/v2/bot/message/push';
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`
+  };
+
+  // sanitize like replyText
+  text = text
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
+    .replace(/:/g, ':')
+    .replace(/[「」]/g, '"')
+    .replace(/[^\S\r\n]+/g, ' ')
+    .trim();
+
+  const body = {
+    to: userId,
+    messages: [{ type: 'text', text }]
+  };
+
+  console.log('📤 推播訊息內容：', JSON.stringify(body, null, 2));
+  await axios.post(url, body, { headers });
+}
+
 const { Client } = require('@googlemaps/google-maps-services-js');
 const googleClient = new Client({});
 
