@@ -519,19 +519,17 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
   let suggestion = '';
   if (score >= 4) {
     level = '高';
-    suggestion = '備多一點，準備開工';
+    suggestion = '多準備一些，可能會有好生意';
   } else if (score >= 2) {
     level = '中';
-    suggestion = '維持正常備貨';
+    suggestion = '照常準備即可';
   } else {
     level = '低';
-    suggestion = '可以少備一點，節省成本';
+    suggestion = '準備少量就好，節省成本';
   }
   
-
-  // ✅ Simplified LINE-safe return
-  return `擺攤等級：${level}。建議備貨量：${suggestion}`;
-
+  return `等級：${level}。建議：${suggestion}`;
+  
 }
 
 
