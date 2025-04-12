@@ -114,6 +114,19 @@ app.post('/webhook', async (req, res) => {
     } else if (userState[userId]?.step === 'end') {
       userState[userId].end = label;
       const { start, end } = userState[userId];
+      const currentDate = new Date();
+
+      // 取得節日與補班資訊
+      const holidayMap = require('./data/2025_holidays.json');
+      const { dayType, boostTomorrowHoliday, note } = analyzeDayType(currentDate, holidayMap);
+
+      // 取得農曆日期
+      const lunar = require('chinese-lunar');
+      const lunarDate = lunar.format(currentDate, 'M月D日'); // e.g., 三月十四
+
+      // 取得節氣
+      const solarTerm = getSolarTerm(currentDate); // You'll define this helper next
+
     
       // ✅ Change to wait for confirmation
       userState[userId].step = 'confirm';
@@ -153,10 +166,29 @@ app.post('/webhook', async (req, res) => {
         boostTomorrowHoliday
       });
   
-      console.log('📤 人流預測訊息：', prediction);
-  
-      // 3️⃣ Push prediction
-      await pushText(userId, prediction.trim());
+      const fullMessage = 
+      `📅【今天是 ${currentDate.getMonth()+1}月${currentDate.getDate()}日｜農曆${lunarDate}】  
+      🏮 節氣：${solarTerm}  
+      🎌 西曆：${getDayTypeText(dayType)}  
+      🧧 傳統：${note || '沒有節日？那就自創理由擺！'}
+
+      📍 地點：${city}${district}  
+      ⛅ 天氣：早上 ${weather.morning} / 下午 ${weather.afternoon} / 晚上 ${weather.night}  
+      🌡️ 體感溫度：27°C → 就算流汗也要出來晃一圈  
+
+      💡 今日吉日建議：
+      ✅ 吉：擺攤、搶客、亂喊優惠  
+      ❌ 忌：高估人潮、自信開滿備貨
+
+      🔥【人流預測】  
+      🟡 等級：${prediction.level}（${prediction.suggestion.includes('悲觀') ? '還不錯，但別幻想暴富' : '隨緣出貨，隨便贏'}）  
+      📦 建議：${prediction.suggestion}  
+
+      🧙‍♀️ 今日爛籤：  
+      ${prediction.quote}`;
+
+      await pushText(userId, fullMessage);
+
   
       // 4️⃣ Clear state
       delete userState[userId];
@@ -555,6 +587,11 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
   
 }
 
+function getSolarTerm(date) {
+  const solarTerms = require('./data/solar_terms_2025.json');
+  const todayStr = formatDate(date);
+  return solarTerms[todayStr] || '清明過後懶得動';
+}
 
 
 app.listen(port, () => {
