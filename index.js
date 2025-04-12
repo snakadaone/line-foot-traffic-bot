@@ -122,7 +122,6 @@ app.post('/webhook', async (req, res) => {
 
       // 取得農曆日期
       const lunar = require('chinese-lunar');
-      const lunarDate = lunar.format(currentDate, 'M月D日'); // e.g., 三月十四
 
       // 取得節氣
       const solarTerm = getSolarTerm(currentDate); // You'll define this helper next
@@ -150,10 +149,12 @@ app.post('/webhook', async (req, res) => {
     if (start && end && city && districtOnly && weather) {
       const currentDate = new Date();
   
-      // 🧧 Fix: Add lunar and solar term
-      const lunar = chineseLunar.solarToLunar(new Date());
-      const lunarMonth = lunar.lunarMonthName; // 正月, 二月...
-      const lunarDay = lunar.lunarDayName;     // 初一, 初二...
+      const chineseLunar = require('chinese-lunar');
+      const lunarInfo = chineseLunar.solarToLunar(currentDate);
+      const lunarMonth = lunarInfo.lunarMonthName;
+      const lunarDay = lunarInfo.lunarDayName;
+      const lunarDate = `${lunarMonth}${lunarDay}`;
+
 
   
       // 1️⃣ Confirm hours
