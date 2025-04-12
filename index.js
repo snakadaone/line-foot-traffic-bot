@@ -155,8 +155,9 @@ app.post('/webhook', async (req, res) => {
 
       console.log('🌙 lunarInfo:', lunarInfo); // debug
 
-      const lunarMonth = lunarInfo?.lunarMonth || 0;
-      const lunarDay = lunarInfo?.lunarDay || 0;
+      const lunarMonth = lunarInfo?.month || 0;
+      const lunarDay = lunarInfo?.day || 0;
+
 
       const lunarMonthName = getLunarMonthName(lunarMonth);
       const lunarDayName = getLunarDayName(lunarDay);
