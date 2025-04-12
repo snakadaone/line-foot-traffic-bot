@@ -154,6 +154,8 @@ app.post('/webhook', async (req, res) => {
       const lunarMonth = lunarInfo.lunarMonthName;
       const lunarDay = lunarInfo.lunarDayName;
       const lunarDate = `${lunarMonth}${lunarDay}`;
+      const solarTerm = getSolarTerm(currentDate); // ← this was missing
+
 
 
   
