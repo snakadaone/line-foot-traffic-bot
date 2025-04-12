@@ -476,13 +476,17 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
       return null;
     }
-
+    
+    const tempParsed = parseInt(tempValue);
+    const feelsLike = isNaN(tempParsed) ? null : tempParsed;
+    
     return {
       morning: times[0].ElementValue?.[0]?.Weather,
       afternoon: times[1].ElementValue?.[0]?.Weather,
       night: times[2].ElementValue?.[0]?.Weather,
-      temperature: parseInt(tempValue) || null
+      temperature: feelsLike
     };
+    
 
   } catch (error) {
     console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error.message);
@@ -670,7 +674,6 @@ function getSolarTerm(date) {
   return solarTerms[todayStr] || '清明過後懶得動';
 }
 
-const temperatureMessages = require('./data/temperature_messages.json');
 const getRandomItem = arr => arr[Math.floor(Math.random() * arr.length)];
 
 function getTemperatureMessage(feelsLikeCelsius) {
