@@ -466,42 +466,30 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       return null;
     }
 
-    const weatherDesc = locationData.WeatherElement.find(el => el.ElementName === '天氣現象');
-    const tempElement = locationData.WeatherElement.find(el => el.ElementName === 'AT'); // 體感溫度
+    const weatherElement = locationData.WeatherElement.find(el => el.ElementName === '天氣現象');
+    const tempElement = locationData.WeatherElement.find(el => el.ElementName === 'AT');
 
-    const weatherTimes = weatherDesc?.Time;
-    const tempTimes = tempElement?.Time;
+    const times = weatherElement?.Time;
+    const tempValue = tempElement?.Time?.[0]?.ElementValue?.[0]?.Value;
 
-    if (!weatherTimes || weatherTimes.length < 3) {
+    if (!times || times.length < 3) {
       console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
       return null;
     }
 
-    let temperature = null;
-    if (tempTimes && tempTimes.length > 0) {
-      const tempStr = tempTimes[0].ElementValue?.[0]?.Value;
-      temperature = parseFloat(tempStr);
-      if (isNaN(temperature)) {
-        console.warn(`⚠️ 體感溫度值不是數字: ${tempStr}`);
-        temperature = null;
-      }
-    } else {
-      console.warn(`⚠️ ${districtOnly} 無體感溫度資料`);
-    }
-
     return {
-      morning: weatherTimes[0].ElementValue?.[0]?.Weather,
-      afternoon: weatherTimes[1].ElementValue?.[0]?.Weather,
-      night: weatherTimes[2].ElementValue?.[0]?.Weather,
-      temperature
+      morning: times[0].ElementValue?.[0]?.Weather,
+      afternoon: times[1].ElementValue?.[0]?.Weather,
+      night: times[2].ElementValue?.[0]?.Weather,
+      temperature: parseInt(tempValue) || null
     };
-
 
   } catch (error) {
     console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error.message);
     return null;
   }
 }
+
 
 
 function getDistrictProfile(city, district) {
