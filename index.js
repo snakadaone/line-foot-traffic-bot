@@ -472,20 +472,22 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     const weatherTimes = weatherDesc?.Time;
     const tempTimes = tempElement?.Time;
 
-    if (!times || times.length < 3) {
+    if (!weatherTimes || weatherTimes.length < 3) {
       console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
       return null;
     }
-    
+
     let temperature = null;
     if (tempTimes && tempTimes.length > 0) {
-      temperature = parseFloat(tempTimes[0].ElementValue?.[0]?.Value);
+      const tempStr = tempTimes[0].ElementValue?.[0]?.Value;
+      temperature = parseFloat(tempStr);
+      if (isNaN(temperature)) {
+        console.warn(`⚠️ 體感溫度值不是數字: ${tempStr}`);
+        temperature = null;
+      }
     } else {
       console.warn(`⚠️ ${districtOnly} 無體感溫度資料`);
     }
-
-  
-    const temperature = parseFloat(tempTimes[0].ElementValue?.[0]?.Value); // 取第一筆的體感溫度
 
     return {
       morning: weatherTimes[0].ElementValue?.[0]?.Weather,
@@ -493,6 +495,8 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       night: weatherTimes[2].ElementValue?.[0]?.Weather,
       temperature
     };
+
+
   } catch (error) {
     console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error.message);
     return null;
