@@ -13,6 +13,7 @@
     "@googlemaps/google-maps-services-js": "^3.4.1",
     "axios": "^1.8.4",
     "body-parser": "^2.2.0",
+    "chinese-lunar": "^0.1.4",
     "dotenv": "^16.4.7",
     "express": "^5.1.0"
   }
