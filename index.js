@@ -472,11 +472,19 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     const weatherTimes = weatherDesc?.Time;
     const tempTimes = tempElement?.Time;
 
-    if (!weatherTimes || weatherTimes.length < 3 || !tempTimes || tempTimes.length === 0) {
-      console.error(`❗ 無法取得 ${districtOnly} 的天氣資料或體感溫度`);
+    if (!times || times.length < 3) {
+      console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
       return null;
     }
+    
+    let temperature = null;
+    if (tempTimes && tempTimes.length > 0) {
+      temperature = parseFloat(tempTimes[0].ElementValue?.[0]?.Value);
+    } else {
+      console.warn(`⚠️ ${districtOnly} 無體感溫度資料`);
+    }
 
+  
     const temperature = parseFloat(tempTimes[0].ElementValue?.[0]?.Value); // 取第一筆的體感溫度
 
     return {
@@ -670,23 +678,37 @@ function getSolarTerm(date) {
   return solarTerms[todayStr] || '清明過後懶得動';
 }
 
+const temperatureMessages = require('./data/temperature_messages.json');
+const getRandomItem = arr => arr[Math.floor(Math.random() * arr.length)];
+
 function getTemperatureMessage(feelsLikeCelsius) {
-  let tempCategory = '';
-  if (feelsLikeCelsius <= 15) {
-    tempCategory = 'cold';
-  } else if (feelsLikeCelsius <= 22) {
-    tempCategory = 'cool';
-  } else if (feelsLikeCelsius <= 28) {
-    tempCategory = 'warm';
-  } else if (feelsLikeCelsius <= 33) {
-    tempCategory = 'hot';
-  } else {
-    tempCategory = 'very_hot';
+  if (feelsLikeCelsius === null || isNaN(feelsLikeCelsius)) {
+    return '氣溫不明，但人還是要出門'; // fallback
   }
 
-  const options = temperatureMessages[tempCategory];
-  return options[Math.floor(Math.random() * options.length)];
+  let key = '';
+  if (feelsLikeCelsius >= 35) {
+    key = 'very_hot';
+  } else if (feelsLikeCelsius >= 30) {
+    key = 'hot';
+  } else if (feelsLikeCelsius >= 25) {
+    key = 'warm';
+  } else if (feelsLikeCelsius >= 20) {
+    key = 'cool';
+  } else if (feelsLikeCelsius >= 15) {
+    key = 'chilly';
+  } else {
+    key = 'cold';
+  }
+
+  const messages = temperatureMessages[key];
+  if (messages && messages.length > 0) {
+    return getRandomItem(messages);
+  } else {
+    return '氣溫正常發揮，靠實力擺攤'; // fallback if array is empty
+  }
 }
+
 
 function getDayTypeText(dayType) {
   switch (dayType) {
