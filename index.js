@@ -151,9 +151,10 @@ app.post('/webhook', async (req, res) => {
       const currentDate = new Date();
   
       // 🧧 Fix: Add lunar and solar term
-      const lunar = require('chinese-lunar');
-      const lunarDate = lunar.format(currentDate, 'M月D日');
-      const solarTerm = getSolarTerm(currentDate);
+      const lunar = chineseLunar.solarToLunar(new Date());
+      const lunarMonth = lunar.lunarMonthName; // 正月, 二月...
+      const lunarDay = lunar.lunarDayName;     // 初一, 初二...
+
   
       // 1️⃣ Confirm hours
       await replyText(event.replyToken, `✅ 營業時間確認完成！\n${start} ~ ${end}`);
