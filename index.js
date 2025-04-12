@@ -151,9 +151,15 @@ app.post('/webhook', async (req, res) => {
   
       const chineseLunar = require('chinese-lunar');
       const lunarInfo = chineseLunar.solarToLunar(currentDate);
-      const lunarMonth = getLunarMonthName(lunarInfo.lunarMonth);
-      const lunarDay = getLunarDayName(lunarInfo.lunarDay);
-      const lunarDate = `${lunarMonth}${lunarDay}`;
+      console.log('🌙 lunarInfo:', lunarInfo); // debug
+
+      const lunarMonth = lunarInfo?.lunarMonth || 0;
+      const lunarDay = lunarInfo?.lunarDay || 0;
+
+      const lunarMonthName = getLunarMonthName(lunarMonth);
+      const lunarDayName = getLunarDayName(lunarDay);
+      const lunarDate = lunarMonthName && lunarDayName ? `${lunarMonthName}${lunarDayName}` : '未知日期';
+
 
       const solarTerm = getSolarTerm(currentDate); 
   
