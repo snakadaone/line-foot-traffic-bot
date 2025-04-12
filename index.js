@@ -151,6 +151,8 @@ app.post('/webhook', async (req, res) => {
   
       const chineseLunar = require('chinese-lunar');
       const lunarInfo = chineseLunar.solarToLunar(currentDate);
+      console.log('🧪 lunarInfo:', JSON.stringify(lunarInfo, null, 2));
+
       console.log('🌙 lunarInfo:', lunarInfo); // debug
 
       const lunarMonth = lunarInfo?.lunarMonth || 0;
@@ -533,13 +535,19 @@ function getLunarMonthName(month) {
 }
 
 function getLunarDayName(day) {
-  const prefixes = ['初', '十', '廿', '三'];
-  const numerals = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
-  if (day <= 10) return '初' + numerals[day - 1];
-  if (day <= 20) return '十' + numerals[day - 11];
-  if (day <= 30) return prefixes[Math.floor(day / 10)] + numerals[(day % 10) - 1];
-  return '';
+  const chineseTens = ['初', '十', '廿', '三十'];
+  const chineseNums = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+
+  if (day === 10) return '初十';
+  if (day === 20) return '二十';
+  if (day === 30) return '三十';
+
+  const ten = chineseTens[Math.floor((day - 1) / 10)];
+  const num = chineseNums[(day - 1) % 10];
+
+  return ten + num;
 }
+
 
 function analyzeDayType(today, holidayMap) {
   const todayStr = formatDate(today);
