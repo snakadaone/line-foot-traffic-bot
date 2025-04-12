@@ -171,6 +171,7 @@ app.post('/webhook', async (req, res) => {
   
       // 2️⃣ Calculate prediction
       const holidayMap = require('./data/2025_holidays.json');
+      const specialDayMap = require('./data/special_days_2025.json');
       const { dayType, boostTomorrowHoliday, note } = analyzeDayType(currentDate, holidayMap);
       const profile = getDistrictProfile(city, districtOnly);
   
@@ -183,11 +184,16 @@ app.post('/webhook', async (req, res) => {
         boostTomorrowHoliday
       });
   
+      const specialDayList = getSpecialDayInfo(formatDate(currentDate), specialDayMap);
+      const specialDayText = specialDayList.length > 0 ? `🎯 特別日子：${specialDayList.join('、')}\n` : '';
+
       const fullMessage = 
       `📅【今天是 ${currentDate.getMonth()+1}月${currentDate.getDate()}日｜農曆${lunarDate}】  
   🏮 節氣：${solarTerm}  
   🎌 西曆：${getDayTypeText(dayType)}  
-  🧧 傳統：${note || '沒有節日？那就自創理由擺！'}
+  🧧 傳統：${note || '沒有節日？那就自創理由擺！'}  
+  ${specialDayText}
+
   
   📍 地點：${city}${districtOnly}  
   ⛅ 天氣：早上 ${weather.morning} / 下午 ${weather.afternoon} / 晚上 ${weather.night}  
@@ -574,6 +580,16 @@ function analyzeDayType(today, holidayMap) {
     note: todayInfo.note || null,
     boostTomorrowHoliday
   };
+}
+
+function getSpecialDayInfo(dateStr, specialDayMap) {
+  const todaySpecials = specialDayMap[dateStr];
+  if (!todaySpecials) return [];
+
+  // 將不同類型的 special day 展平為 array
+  return Object.entries(todaySpecials).flatMap(([type, names]) => {
+    return names.map(name => `${name}（${type}）`);
+  });
 }
 
 function predictFootTraffic({ districtProfile, dayType, weather, start, end, boostTomorrowHoliday }) {
