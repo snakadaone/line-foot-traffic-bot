@@ -148,13 +148,19 @@ app.post('/webhook', async (req, res) => {
   else if (text === '確認營業時間') {
     const { start, end, city, districtOnly, weather } = userState[userId] || {};
     if (start && end && city && districtOnly && weather) {
+      const currentDate = new Date();
+  
+      // 🧧 Fix: Add lunar and solar term
+      const lunar = require('chinese-lunar');
+      const lunarDate = lunar.format(currentDate, 'M月D日');
+      const solarTerm = getSolarTerm(currentDate);
+  
       // 1️⃣ Confirm hours
       await replyText(event.replyToken, `✅ 營業時間確認完成！\n${start} ~ ${end}`);
   
       // 2️⃣ Calculate prediction
-      const currentDate = new Date();
       const holidayMap = require('./data/2025_holidays.json');
-      const { dayType, boostTomorrowHoliday } = analyzeDayType(currentDate, holidayMap);
+      const { dayType, boostTomorrowHoliday, note } = analyzeDayType(currentDate, holidayMap);
       const profile = getDistrictProfile(city, districtOnly);
   
       const prediction = predictFootTraffic({
@@ -168,34 +174,32 @@ app.post('/webhook', async (req, res) => {
   
       const fullMessage = 
       `📅【今天是 ${currentDate.getMonth()+1}月${currentDate.getDate()}日｜農曆${lunarDate}】  
-      🏮 節氣：${solarTerm}  
-      🎌 西曆：${getDayTypeText(dayType)}  
-      🧧 傳統：${note || '沒有節日？那就自創理由擺！'}
-
-      📍 地點：${city}${districtOnly}  
-      ⛅ 天氣：早上 ${weather.morning} / 下午 ${weather.afternoon} / 晚上 ${weather.night}  
-      🌡️ 體感溫度：27°C → 就算流汗也要出來晃一圈  
-
-      💡 今日吉日建議：
-      ✅ 吉：擺攤、搶客、亂喊優惠  
-      ❌ 忌：高估人潮、自信開滿備貨
-
-      🔥【人流預測】  
-      🟡 等級：${prediction.level}（${prediction.suggestion.includes('悲觀') ? '還不錯，但別幻想暴富' : '隨緣出貨，隨便贏'}）  
-      📦 建議：${prediction.suggestion}  
-
-      🧙‍♀️ 今日爛籤：  
-      ${prediction.quote}`;
-
-      await pushText(userId, fullMessage);
-
+  🏮 節氣：${solarTerm}  
+  🎌 西曆：${getDayTypeText(dayType)}  
+  🧧 傳統：${note || '沒有節日？那就自創理由擺！'}
   
-      // 4️⃣ Clear state
+  📍 地點：${city}${districtOnly}  
+  ⛅ 天氣：早上 ${weather.morning} / 下午 ${weather.afternoon} / 晚上 ${weather.night}  
+  🌡️ 體感溫度:27°C → 就算流汗也要出來晃一圈  
+  
+  💡 今日吉日建議：
+  ✅ 吉：擺攤、搶客、亂喊優惠  
+  ❌ 忌：高估人潮、自信開滿備貨
+  
+  🔥【人流預測】  
+  🟡 等級：${prediction.level}(${prediction.suggestion.includes('悲觀') ? '還不錯，但別幻想暴富' : '隨緣出貨，隨便贏'}）  
+  📦 建議：${prediction.suggestion}  
+  
+  🧙‍♀️ 今日爛籤：  
+  ${prediction.quote}`;
+  
+      await pushText(userId, fullMessage);
       delete userState[userId];
     } else {
       await replyText(event.replyToken, '⚠️ 尚未設定完成營業時間或地區資料，請重新設定。');
     }
   }
+  
   
 
   else if (text === '確認設定') {
