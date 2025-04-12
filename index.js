@@ -172,7 +172,7 @@ app.post('/webhook', async (req, res) => {
       🎌 西曆：${getDayTypeText(dayType)}  
       🧧 傳統：${note || '沒有節日？那就自創理由擺！'}
 
-      📍 地點：${city}${district}  
+      📍 地點：${city}${districtOnly}  
       ⛅ 天氣：早上 ${weather.morning} / 下午 ${weather.afternoon} / 晚上 ${weather.night}  
       🌡️ 體感溫度：27°C → 就算流汗也要出來晃一圈  
 
@@ -583,7 +583,18 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
     suggestion = '準備少量就好，節省成本';
   }
   
-  return `等級：${level}。建議：${suggestion}`;
+  const quotes = [
+    '「人多的時候你是邊角，人少的時候你是全場焦點。乾脆擺著等奇蹟。」',
+    '「等的不是客，是運氣。」',
+    '「沒賣完不是你廢，是人潮在擺爛。」'
+  ];
+  
+  return {
+    level,
+    suggestion,
+    quote: quotes[Math.floor(Math.random() * quotes.length)]
+  };
+  
   
 }
 
