@@ -8,6 +8,7 @@ const bodyParser = require('body-parser');
 const app = express();
 const port = process.env.PORT || 3000;
 const districtProfiles = require('./data/district_profiles.json');
+const temperatureMessages = require('./data/temperature_messages.json');
 
 
 
@@ -186,6 +187,9 @@ app.post('/webhook', async (req, res) => {
   
       const specialDayList = getSpecialDayInfo(formatDate(currentDate), specialDayMap);
       const specialDayText = specialDayList.length > 0 ? `🎯 特別日子：${specialDayList.join('、')}\n` : '';
+      const temperatureText = `🌡️ 體感溫度：${weather.temperature}°C → ${getTemperatureMessage(weather.temperature)}`;
+
+
 
       const fullMessage = 
       `📅【今天是 ${currentDate.getMonth()+1}月${currentDate.getDate()}日｜農曆${lunarDate}】  
@@ -197,7 +201,9 @@ app.post('/webhook', async (req, res) => {
   
   📍 地點：${city}${districtOnly}  
   ⛅ 天氣：早上 ${weather.morning} / 下午 ${weather.afternoon} / 晚上 ${weather.night}  
-  🌡️ 體感溫度:27°C → 就算流汗也要出來晃一圈  
+  ${temperatureText}
+
+  
   
   💡 今日吉日建議：
   ✅ 吉：擺攤、搶客、亂喊優惠  
@@ -464,6 +470,12 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     }
 
     const weatherElement = locationData.WeatherElement.find(el => el.ElementName === '天氣現象'); // 'Wx' is only in some endpoints
+    const tempElement = locationData.WeatherElement.find(el => el.ElementName === '溫度');
+    const tempTimes = tempElement?.Time;
+    const avgTemp = tempTimes && tempTimes.length > 0
+      ? parseFloat(tempTimes[0]?.ElementValue?.[0]?.Value)
+      : 27; // fallback default
+
     const times = weatherElement?.Time;
 
     console.log('🕒 weatherElement.Time:', JSON.stringify(weatherElement.Time, null, 2));
@@ -476,8 +488,10 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     return {
       morning: times[0].ElementValue?.[0]?.Weather,
       afternoon: times[1].ElementValue?.[0]?.Weather,
-      night: times[2].ElementValue?.[0]?.Weather
+      night: times[2].ElementValue?.[0]?.Weather,
+      temperature: avgTemp
     };
+    
       
   } catch (error) {
     console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error.message);
@@ -582,6 +596,14 @@ function analyzeDayType(today, holidayMap) {
   };
 }
 
+const weatherMessages = require('./data/weather_messages.json');
+
+function getRandomWeatherComment(condition) {
+  const list = weatherMessages[condition];
+  if (!list || list.length === 0) return '';
+  return list[Math.floor(Math.random() * list.length)];
+}
+
 function getSpecialDayInfo(dateStr, specialDayMap) {
   const todaySpecials = specialDayMap[dateStr];
   if (!todaySpecials) return [];
@@ -653,6 +675,24 @@ function getSolarTerm(date) {
   const solarTerms = require('./data/solar_terms_2025.json');
   const todayStr = formatDate(date);
   return solarTerms[todayStr] || '清明過後懶得動';
+}
+
+function getTemperatureMessage(feelsLikeCelsius) {
+  let tempCategory = '';
+  if (feelsLikeCelsius <= 15) {
+    tempCategory = 'cold';
+  } else if (feelsLikeCelsius <= 22) {
+    tempCategory = 'cool';
+  } else if (feelsLikeCelsius <= 28) {
+    tempCategory = 'warm';
+  } else if (feelsLikeCelsius <= 33) {
+    tempCategory = 'hot';
+  } else {
+    tempCategory = 'very_hot';
+  }
+
+  const options = temperatureMessages[tempCategory];
+  return options[Math.floor(Math.random() * options.length)];
 }
 
 function getDayTypeText(dayType) {
