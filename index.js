@@ -192,19 +192,16 @@ app.post('/webhook', async (req, res) => {
 
 
       const fullMessage = 
-      `📅【今天是 ${currentDate.getMonth()+1}月${currentDate.getDate()}日｜農曆${lunarDate}】  
+      `📅 今天是 ${currentDate.getMonth()+1}月${currentDate.getDate()}日｜農曆${lunarDate}  
   🏮 節氣：${solarTerm}  
   🎌 西曆：${getDayTypeText(dayType)}  
   🧧 傳統：${note || '沒有節日？那就自創理由擺！'}  
   ${specialDayText}
 
-  
   📍 地點：${city}${districtOnly}  
   ⛅ 天氣：早上 ${weather.morning} / 下午 ${weather.afternoon} / 晚上 ${weather.night}  
   ${temperatureText}
 
-  
-  
   💡 今日吉日建議：
   ✅ 吉：擺攤、搶客、亂喊優惠  
   ❌ 忌：高估人潮、自信開滿備貨
@@ -469,35 +466,31 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       return null;
     }
 
-    const weatherElement = locationData.WeatherElement.find(el => el.ElementName === '天氣現象'); // 'Wx' is only in some endpoints
-    const tempElement = locationData.WeatherElement.find(el => el.ElementName === '溫度');
+    const weatherDesc = locationData.WeatherElement.find(el => el.ElementName === '天氣現象');
+    const tempElement = locationData.WeatherElement.find(el => el.ElementName === 'AT'); // 體感溫度
+
+    const weatherTimes = weatherDesc?.Time;
     const tempTimes = tempElement?.Time;
-    const avgTemp = tempTimes && tempTimes.length > 0
-      ? parseFloat(tempTimes[0]?.ElementValue?.[0]?.Value)
-      : 27; // fallback default
 
-    const times = weatherElement?.Time;
-
-    console.log('🕒 weatherElement.Time:', JSON.stringify(weatherElement.Time, null, 2));
-
-    if (!times || times.length < 3) {
-      console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
+    if (!weatherTimes || weatherTimes.length < 3 || !tempTimes || tempTimes.length === 0) {
+      console.error(`❗ 無法取得 ${districtOnly} 的天氣資料或體感溫度`);
       return null;
     }
 
+    const temperature = parseFloat(tempTimes[0].ElementValue?.[0]?.Value); // 取第一筆的體感溫度
+
     return {
-      morning: times[0].ElementValue?.[0]?.Weather,
-      afternoon: times[1].ElementValue?.[0]?.Weather,
-      night: times[2].ElementValue?.[0]?.Weather,
-      temperature: avgTemp
+      morning: weatherTimes[0].ElementValue?.[0]?.Weather,
+      afternoon: weatherTimes[1].ElementValue?.[0]?.Weather,
+      night: weatherTimes[2].ElementValue?.[0]?.Weather,
+      temperature
     };
-    
-      
   } catch (error) {
     console.error('❗ getWeatherForecast 錯誤:', error.response?.data || error.message);
     return null;
   }
 }
+
 
 function getDistrictProfile(city, district) {
   const key = `${city}${district}`;
