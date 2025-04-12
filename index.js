@@ -151,13 +151,9 @@ app.post('/webhook', async (req, res) => {
   
       const chineseLunar = require('chinese-lunar');
       const lunarInfo = chineseLunar.solarToLunar(currentDate);
-      const lunarMonth = chineseLunar.getLunarMonthName(lunarInfo.lunarMonth);
-      const lunarDay = chineseLunar.getLunarDayName(lunarInfo.lunarDay);
+      const lunarMonth = getLunarMonthName(lunarInfo.lunarMonth);
+      const lunarDay = getLunarDayName(lunarInfo.lunarDay);
       const lunarDate = `${lunarMonth}${lunarDay}`;
-
-
-
-
   
       // 1️⃣ Confirm hours
       await replyText(event.replyToken, `✅ 營業時間確認完成！\n${start} ~ ${end}`);
@@ -521,6 +517,20 @@ async function replyConfirmTime(replyToken, start, end) {
 
   function formatDate(date) {
   return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+}
+
+function getLunarMonthName(month) {
+  const names = ['正月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '冬月', '臘月'];
+  return names[month - 1] || '';
+}
+
+function getLunarDayName(day) {
+  const prefixes = ['初', '十', '廿', '三'];
+  const numerals = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+  if (day <= 10) return '初' + numerals[day - 1];
+  if (day <= 20) return '十' + numerals[day - 11];
+  if (day <= 30) return prefixes[Math.floor(day / 10)] + numerals[(day % 10) - 1];
+  return '';
 }
 
 function analyzeDayType(today, holidayMap) {
