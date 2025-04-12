@@ -154,6 +154,8 @@ app.post('/webhook', async (req, res) => {
       const lunarMonth = getLunarMonthName(lunarInfo.lunarMonth);
       const lunarDay = getLunarDayName(lunarInfo.lunarDay);
       const lunarDate = `${lunarMonth}${lunarDay}`;
+
+      const solarTerm = getSolarTerm(currentDate); 
   
       // 1️⃣ Confirm hours
       await replyText(event.replyToken, `✅ 營業時間確認完成！\n${start} ~ ${end}`);
