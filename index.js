@@ -608,6 +608,16 @@ function getSolarTerm(date) {
   return solarTerms[todayStr] || '清明過後懶得動';
 }
 
+function getDayTypeText(dayType) {
+  switch (dayType) {
+    case 'holiday': return '國定假日 🛋️';
+    case 'weekend': return '週末 🤙';
+    case 'makeupWorkday': return '補班日 🧨';
+    case 'workday': return '平日 🥱';
+    default: return '未知';
+  }
+}
+
 
 app.listen(port, () => {
   console.log(`🚀 LINE Bot 已啟動：埠號 ${port}`);
