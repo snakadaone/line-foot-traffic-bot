@@ -197,9 +197,17 @@ app.post('/webhook', async (req, res) => {
       const specialDayList = getSpecialDayInfo(formatDate(currentDate), specialDayMap);
       const specialDayText = specialDayList.length > 0 ? `🎯 特別日子：${specialDayList.join('、')}\n` : '';
       const temperatureComment = getTemperatureMessage(weather.feelsLike);
-      const temperatureLine = (weather.minTemp != null && weather.maxTemp != null)
-        ? `🌡️ 溫度範圍：${weather.minTemp}°C ~ ${weather.maxTemp}°C → 擺攤不冷不熱剛剛好`
-        : `🌡️ 溫度範圍：氣溫不明 → 擺爛靠直覺`;
+      
+      let temperatureLine = '';
+      if (weather.minTemp != null && weather.maxTemp != null) {
+        temperatureLine = `🌡️ 溫度範圍：${weather.minTemp}°C ~ ${weather.maxTemp}°C → 擺攤不冷不熱剛剛好`;
+      } else if (weather.feelsLike != null) {
+        const feelsComment = getTemperatureMessage(weather.feelsLike);
+        temperatureLine = `🌡️ 體感溫度：${weather.feelsLike}°C → ${feelsComment}`;
+      } else {
+        temperatureLine = '🌡️ 溫度範圍：氣溫不明 → 擺爛靠直覺';
+      }
+
 
 
 
@@ -482,8 +490,6 @@ async function getWeatherForecast(cityOnly, districtOnly) {
 
     const weatherElement = locationData.WeatherElement.find(el => el.ElementName === '天氣現象');
     const atElement = locationData.WeatherElement.find(el => el.ElementName === 'AT');
-    const tElement = locationData.WeatherElement.find(el => el.ElementName === 'T'); // for max/min
-
     const times = weatherElement?.Time;
     
 
@@ -495,11 +501,22 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     // 🔥 Extract Max and Min Temp
     let maxTemp = null;
     let minTemp = null;
+    const tElement = locationData.WeatherElement.find(el => el.ElementName === 'T');
     if (tElement?.Time?.length >= 3) {
-      const temps = tElement.Time.slice(0, 3).map(t => parseInt(t.ElementValue?.[0]?.Value));
+      const temps = tElement.Time.slice(0, 3)
+        .map(t => parseFloat(t.ElementValue?.[0]?.Value))
+        .filter(t => !isNaN(t));
+
+      console.log('🌡️ Extracted temps:', temps);
+
+    if (temps.length > 0) {
       maxTemp = Math.max(...temps);
       minTemp = Math.min(...temps);
+      console.log('🌡️ maxTemp:', maxTemp, 'minTemp:', minTemp);
     }
+  }
+
+    
 
     // 🔥 Extract Feels-like temperature
     let feelsLike = null;
@@ -510,14 +527,22 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       }
     }
 
+    console.log('🌤️ weather labels:', {
+      morning: times[0].ElementValue?.[0]?.ParameterName,
+      afternoon: times[1].ElementValue?.[0]?.ParameterName,
+      night: times[2].ElementValue?.[0]?.ParameterName,
+    });
+    
+
     return {
-      morning: times[0].ElementValue?.[0]?.Weather,
-      afternoon: times[1].ElementValue?.[0]?.Weather,
-      night: times[2].ElementValue?.[0]?.Weather,
+      morning: times[0].ElementValue?.[0]?.ParameterName,
+      afternoon: times[1].ElementValue?.[0]?.ParameterName,
+      night: times[2].ElementValue?.[0]?.ParameterName,
       maxTemp,
       minTemp,
       feelsLike
     };
+    
 
     
 
