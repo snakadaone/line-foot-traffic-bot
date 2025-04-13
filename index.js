@@ -492,19 +492,22 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       return null;
     }
     
-    const tempParsed = parseInt(tempValue);
-    const feelsLike = isNaN(tempParsed) ? null : tempParsed;
-    
-    // Get MaxT and MinT
-    const tempElement = locationData.WeatherElement.find(el => el.ElementName === 'T');
-
+    // 🔥 Extract Max and Min Temp
     let maxTemp = null;
     let minTemp = null;
-
-    if (tempElement?.Time?.length >= 3) {
-      const temps = tempElement.Time.slice(0, 3).map(t => parseInt(t.ElementValue?.[0]?.Value));
+    if (tElement?.Time?.length >= 3) {
+      const temps = tElement.Time.slice(0, 3).map(t => parseInt(t.ElementValue?.[0]?.Value));
       maxTemp = Math.max(...temps);
       minTemp = Math.min(...temps);
+    }
+
+    // 🔥 Extract Feels-like temperature
+    let feelsLike = null;
+    if (atElement?.Time?.[0]?.ElementValue?.[0]?.Value) {
+      const temp = parseFloat(atElement.Time[0].ElementValue[0].Value);
+      if (!isNaN(temp)) {
+        feelsLike = temp;
+      }
     }
 
     return {
