@@ -204,29 +204,28 @@ app.post('/webhook', async (req, res) => {
 
 
 
-      const fullMessage = 
-      `📅 今天是 ${currentDate.getMonth()+1}月${currentDate.getDate()}日｜農曆${lunarDate}  
-  🏮 節氣：${solarTerm}  
-  🎌 西曆：${getDayTypeText(dayType)}  
-  🧧 傳統：${note || '沒有節日？那就自創理由擺！'}  
-  ${specialDayText}
-
-  📍 地點：${city}${districtOnly}  
-  ⛅ 天氣：早上 ${weather.morning} / 下午 ${weather.afternoon} / 晚上 ${weather.night}  
-  ${temperatureLine}
-  ...
-  `;
-
-  💡 今日吉日建議：
-  ✅ 吉：擺攤、搶客、亂喊優惠  
-  ❌ 忌：高估人潮、自信開滿備貨
-  
-  🔥【人流預測】  
-  🟡 等級：${prediction.level}(${prediction.suggestion.includes('悲觀') ? '還不錯，但別幻想暴富' : '隨緣出貨，隨便贏'}）  
-  📦 建議：${prediction.suggestion}  
-  
-  🧙‍♀️ 今日爛籤：  
-  ${prediction.quote}`;
+        const fullMessage = 
+        `📅 今天是 ${currentDate.getMonth() + 1}月${currentDate.getDate()}日｜農曆${lunarDate}
+        🏮 節氣：${solarTerm}
+        🎌 西曆：${getDayTypeText(dayType)}
+        🧧 傳統：${note || '沒有節日？那就自創理由擺！'}
+        ${specialDayText}
+        
+        📍 地點：${city}${districtOnly}
+        ⛅ 天氣：早上 ${weather.morning} / 下午 ${weather.afternoon} / 晚上 ${weather.night}
+        ${temperatureLine}
+        
+        💡 今日吉日建議：
+        ✅ 吉：擺攤、搶客、亂喊優惠
+        ❌ 忌：高估人潮、自信開滿備貨
+        
+        🔥【人流預測】
+        🟡 等級：${prediction.level}（${prediction.suggestion.includes('悲觀') ? '還不錯，但別幻想暴富' : '隨緣出貨，隨便贏'}）
+        📦 建議：${prediction.suggestion}
+        
+        🧙‍♀️ 今日爛籤：
+        ${prediction.quote}`;
+        
   
       await pushText(userId, fullMessage);
       delete userState[userId];
