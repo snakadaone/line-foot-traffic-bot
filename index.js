@@ -63,17 +63,11 @@ app.post('/webhook', async (req, res) => {
       location: { lat: latitude, lng: longitude },
       city: cityOnly,
       districtOnly,
-      weather: {
-        morning: weather.morning,
-        afternoon: weather.afternoon,
-        night: weather.night,
-        minTemp: weather.minTemp,
-        maxTemp: weather.maxTemp,
-        feelsLike: weather.feelsLike
-      }
-      
+      weather    
     };
     
+    console.log('🌤️ Saved weather data:', userState[userId].weather);
+
 
 
     
@@ -498,6 +492,14 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       return null;
     }
     
+    let morning = '未知', afternoon = '未知', night = '未知';
+    if (times && times.length >= 3) {
+      morning = times[0].ElementValue?.[0]?.Value || '未知';
+      afternoon = times[1].ElementValue?.[0]?.Value || '未知';
+      night = times[2].ElementValue?.[0]?.Value || '未知';
+    } else {
+      console.warn(`❗ 時間段資料不足: ${districtOnly}`);
+    }
     // 🔥 Extract Max and Min Temp
     let maxTemp = null;
     let minTemp = null;
