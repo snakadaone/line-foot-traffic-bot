@@ -62,9 +62,18 @@ app.post('/webhook', async (req, res) => {
       ...userState[userId],
       location: { lat: latitude, lng: longitude },
       city: cityOnly,
-      weather,
       districtOnly,
+      weather: {
+        morning: weather.morning,
+        afternoon: weather.afternoon,
+        night: weather.night,
+        minTemp: weather.minTemp,
+        maxTemp: weather.maxTemp,
+        feelsLike: weather.feelsLike
+      }
+      
     };
+    
 
 
     
@@ -187,7 +196,11 @@ app.post('/webhook', async (req, res) => {
   
       const specialDayList = getSpecialDayInfo(formatDate(currentDate), specialDayMap);
       const specialDayText = specialDayList.length > 0 ? `🎯 特別日子：${specialDayList.join('、')}\n` : '';
-      const temperatureText = `🌡️ 體感溫度：${weather.temperature}°C → ${getTemperatureMessage(weather.temperature)}`;
+      const temperatureComment = getTemperatureMessage(weather.feelsLike);
+      const temperatureLine = (weather.minTemp != null && weather.maxTemp != null)
+        ? `🌡️ 溫度範圍：${weather.minTemp}°C ~ ${weather.maxTemp}°C → 擺攤不冷不熱剛剛好`
+        : `🌡️ 溫度範圍：氣溫不明 → 擺爛靠直覺`;
+
 
 
 
@@ -200,7 +213,9 @@ app.post('/webhook', async (req, res) => {
 
   📍 地點：${city}${districtOnly}  
   ⛅ 天氣：早上 ${weather.morning} / 下午 ${weather.afternoon} / 晚上 ${weather.night}  
-  ${temperatureText}
+  ${temperatureLine}
+  ...
+  `;
 
   💡 今日吉日建議：
   ✅ 吉：擺攤、搶客、亂喊優惠  
@@ -467,10 +482,11 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     }
 
     const weatherElement = locationData.WeatherElement.find(el => el.ElementName === '天氣現象');
-    const tempElement = locationData.WeatherElement.find(el => el.ElementName === 'AT');
+    const atElement = locationData.WeatherElement.find(el => el.ElementName === 'AT');
+    const tElement = locationData.WeatherElement.find(el => el.ElementName === 'T'); // for max/min
 
     const times = weatherElement?.Time;
-    const tempValue = tempElement?.Time?.[0]?.ElementValue?.[0]?.Value;
+    
 
     if (!times || times.length < 3) {
       console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
@@ -480,12 +496,27 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     const tempParsed = parseInt(tempValue);
     const feelsLike = isNaN(tempParsed) ? null : tempParsed;
     
+    // Get MaxT and MinT
+    const tempElement = locationData.WeatherElement.find(el => el.ElementName === 'T');
+
+    let maxTemp = null;
+    let minTemp = null;
+
+    if (tempElement?.Time?.length >= 3) {
+      const temps = tempElement.Time.slice(0, 3).map(t => parseInt(t.ElementValue?.[0]?.Value));
+      maxTemp = Math.max(...temps);
+      minTemp = Math.min(...temps);
+    }
+
     return {
       morning: times[0].ElementValue?.[0]?.Weather,
       afternoon: times[1].ElementValue?.[0]?.Weather,
       night: times[2].ElementValue?.[0]?.Weather,
-      temperature: feelsLike
+      maxTemp,
+      minTemp,
+      feelsLike
     };
+
     
 
   } catch (error) {
