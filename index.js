@@ -6,6 +6,14 @@ const axios = require('axios');
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
+// 🔍 Test your public IP address from Render
+app.get('/myip', async (req, res) => {
+  try {
+    const ipRes = await axios.get('https://api.ipify.org?format=json');
+    res.send(`🛰️ Render Public IP: ${ipRes.data.ip}`);
+  } catch (error) {
+    res.status
+
 const port = process.env.PORT || 3000;
 const districtProfiles = require('./data/district_profiles.json');
 const temperatureMessages = require('./data/temperature_messages.json');
