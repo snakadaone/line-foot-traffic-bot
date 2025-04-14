@@ -551,8 +551,10 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       minTemp,
       feelsLike
     };
+    console.log('🌤️ Final parsed weather:', result); // optional debug
+    return result;
 
-  } catch (error) {
+    } catch (error) {
     console.error('❗ 取得天氣預報時發生錯誤:', error.message);
     return null;
   }
