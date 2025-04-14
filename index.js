@@ -12,7 +12,10 @@ app.get('/myip', async (req, res) => {
     const ipRes = await axios.get('https://api.ipify.org?format=json');
     res.send(`🛰️ Render Public IP: ${ipRes.data.ip}`);
   } catch (error) {
-    res.status
+    res.status(500).send('❗ Failed to fetch IP address');
+  }
+});
+
 
 const port = process.env.PORT || 3000;
 const districtProfiles = require('./data/district_profiles.json');
