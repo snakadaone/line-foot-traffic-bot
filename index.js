@@ -485,84 +485,70 @@ async function getWeatherForecast(cityOnly, districtOnly) {
 
     const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${datasetId}?Authorization=${process.env.CWB_API_KEY}&format=JSON`;
     const res = await axios.get(url);
+    const locations = res.data?.records?.Locations?.[0]?.Location;
+    const locationData = locations?.find(loc => loc.LocationName === districtOnly);
 
-    const root = res.data;
-    const locations = root?.records?.Locations?.[0]?.Location;
-    if (!locations) {
-      console.error('❗ CWB 回傳格式錯誤或沒有資料', JSON.stringify(root, null, 2));
-      return null;
-    }
-
-    const locationData = locations.find(loc => loc.LocationName === districtOnly);
     if (!locationData) {
       console.error(`❗ 找不到區鄉鎮 ${districtOnly} in ${cityOnly}`);
-      const available = locations.map(l => l.LocationName);
-      console.log('📍 可用地區:', available);
       return null;
     }
 
-    const wxElement = locationData.WeatherElement.find(e => e.ElementName === '天氣現象');
-    const tElement = locationData.WeatherElement.find(e => e.ElementName === 'T');
+    const weatherDesc = locationData.WeatherElement.find(e => e.ElementName === '天氣預報綜合描述');
 
-    // 1️⃣ 分段取天氣：早上 / 下午 / 晚上
-    function getSegmentFromTime(startTimeStr) {
-      const hour = new Date(startTimeStr).getHours();
-      if (hour >= 6 && hour < 12) return 'morning';
-      if (hour >= 12 && hour < 18) return 'afternoon';
-      if (hour >= 18 && hour < 24) return 'night';
-      return null;
+    const segments = {
+      morning: [],
+      afternoon: [],
+      night: []
+    };
+
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    for (const period of weatherDesc.Time) {
+      const start = new Date(period.StartTime);
+      if (!period.ElementValue?.[0]?.WeatherDescription) continue;
+      if (!period.StartTime.startsWith(todayStr)) continue;
+
+      const hour = start.getHours();
+      const description = period.ElementValue[0].WeatherDescription;
+
+      if (hour >= 6 && hour < 12) segments.morning.push(description);
+      else if (hour >= 12 && hour < 18) segments.afternoon.push(description);
+      else if (hour >= 18 && hour < 24) segments.night.push(description);
     }
 
-    let morning = '未知', afternoon = '未知', night = '未知';
-
-    if (Array.isArray(wxElement?.Time)) {
-      const segments = { morning: '未知', afternoon: '未知', night: '未知' };
-      wxElement.Time.forEach(period => {
-        const seg = getSegmentFromTime(period.StartTime);
-        if (seg && segments[seg] === '未知') {
-          segments[seg] = period.ElementValue?.[0]?.Value || '未知';
-        }
-      });
-      morning = segments.morning;
-      afternoon = segments.afternoon;
-      night = segments.night;
-    } else {
-      console.warn('⚠️ 天氣現象資料不足');
+    function simplify(descList) {
+      return descList.length > 0 ? descList[0].split('。')[0] : '未知';
     }
 
-    // 2️⃣ 計算今天的最高 / 最低溫度
-    let maxTemp = null;
-    let minTemp = null;
-
-    if (Array.isArray(tElement?.Time)) {
-      const today = new Date().toISOString().split('T')[0]; // e.g. "2025-04-15"
-      const temps = tElement.Time
-        .filter(period => period.DataTime?.startsWith(today))
-        .map(period => parseFloat(period.ElementValue?.[0]?.Value))
-        .filter(t => !isNaN(t));
-
-      if (temps.length > 0) {
-        maxTemp = Math.max(...temps);
-        minTemp = Math.min(...temps);
-      } else {
-        console.warn('⚠️ 找不到有效的溫度值');
+    // Extract temperature min/max
+    const temps = [];
+    for (const period of weatherDesc.Time) {
+      if (!period.StartTime.startsWith(todayStr)) continue;
+      const text = period.ElementValue[0].WeatherDescription;
+      const match = text.match(/溫度攝氏(\d{1,2})(至(\d{1,2}))?/);
+      if (match) {
+        const t1 = parseInt(match[1], 10);
+        const t2 = match[3] ? parseInt(match[3], 10) : t1;
+        temps.push(t1, t2);
       }
-    } else {
-      console.warn('⚠️ 沒有 T 元素或時間區段');
     }
+
+    const maxTemp = temps.length ? Math.max(...temps) : null;
+    const minTemp = temps.length ? Math.min(...temps) : null;
 
     const result = {
-      morning,
-      afternoon,
-      night,
+      morning: simplify(segments.morning),
+      afternoon: simplify(segments.afternoon),
+      night: simplify(segments.night),
       maxTemp,
       minTemp
     };
 
     console.log('🌤️ Final parsed weather:', result);
     return result;
-  } catch (error) {
-    console.error('❗ 取得天氣預報時發生錯誤:', error.message);
+  } catch (err) {
+    console.error('❗ 取得天氣預報失敗:', err.message);
     return null;
   }
 }
