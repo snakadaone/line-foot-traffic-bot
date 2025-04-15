@@ -27,8 +27,15 @@ app.use(bodyParser.json());
 
 const userState = {}; // 儲存每位使用者的營業時間選擇狀態
 
-app.post('/webhook', async (req, res) => {
-  const event = req.body.events[0];
+app.post('/webhook', express.json(), async (req, res) => {
+  const events = req.body?.events;
+
+  if (!Array.isArray(events) || events.length === 0) {
+    console.warn('⚠️ 無效的 LINE 請求 (沒有 events)', req.body);
+    return res.sendStatus(200); // Must return 200 to prevent LINE errors
+  }
+
+  const event = events[0];
   const userId = event.source?.userId;
   const text = event.message?.text;
   const postbackData = event.postback?.data;
@@ -201,19 +208,17 @@ app.post('/webhook', async (req, res) => {
   
       const specialDayList = getSpecialDayInfo(formatDate(currentDate), specialDayMap);
       const specialDayText = specialDayList.length > 0 ? `🎯 特別日子：${specialDayList.join('、')}\n` : '';
-      const temperatureComment = getTemperatureMessage(weather.feelsLike);
-      
       let temperatureLine = '';
       if (weather.maxTemp != null || weather.minTemp != null) {
         const max = weather.maxTemp != null ? `${weather.maxTemp}°C` : '未知';
         const min = weather.minTemp != null ? `${weather.minTemp}°C` : '未知';
-        temperatureLine = `🌡️ 溫度範圍：${min} ~ ${max} → 擺攤不冷不熱剛剛好`;
-      } else if (weather.feelsLike != null) {
-        const feelsComment = getTemperatureMessage(weather.feelsLike);
-        temperatureLine = `🌡️ 體感溫度：${weather.feelsLike}°C → ${feelsComment}`;
+        const comment = getTemperatureCommentByRange(weather.minTemp, weather.maxTemp);
+        temperatureLine = `🌡️ 溫度範圍：${min} ~ ${max} → ${comment}`;
       } else {
         temperatureLine = '🌡️ 溫度範圍：氣溫不明 → 擺爛靠直覺';
       }
+
+
 
 
 
@@ -496,54 +501,54 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       return null;
     }
 
-    const weatherElement = locationData.WeatherElement.find(el => el.ElementName === '天氣現象');
-    const atElement = locationData.WeatherElement.find(el => el.ElementName === 'AT');
-    const times = weatherElement?.Time;
-    
+    const wxElement = locationData.WeatherElement.find(e => e.ElementName === '天氣現象');
+    const tElement = locationData.WeatherElement.find(e => e.ElementName === 'T');
 
-    if (!times || times.length < 3) {
-      console.error(`❗ 無法取得 ${districtOnly} 的天氣資料時間`);
+    // 1️⃣ 分段取天氣：早上 / 下午 / 晚上
+    function getSegmentFromTime(startTimeStr) {
+      const hour = new Date(startTimeStr).getHours();
+      if (hour >= 6 && hour < 12) return 'morning';
+      if (hour >= 12 && hour < 18) return 'afternoon';
+      if (hour >= 18 && hour < 24) return 'night';
       return null;
     }
-    
+
     let morning = '未知', afternoon = '未知', night = '未知';
-    if (times && times.length >= 3) {
-      morning = times[0].ElementValue?.[0]?.Value || '未知';
-      afternoon = times[1].ElementValue?.[0]?.Value || '未知';
-      night = times[2].ElementValue?.[0]?.Value || '未知';
+
+    if (Array.isArray(wxElement?.Time)) {
+      const segments = { morning: '未知', afternoon: '未知', night: '未知' };
+      wxElement.Time.forEach(period => {
+        const seg = getSegmentFromTime(period.StartTime);
+        if (seg && segments[seg] === '未知') {
+          segments[seg] = period.ElementValue?.[0]?.Value || '未知';
+        }
+      });
+      morning = segments.morning;
+      afternoon = segments.afternoon;
+      night = segments.night;
     } else {
-      console.warn(`❗ 時間段資料不足: ${districtOnly}`);
+      console.warn('⚠️ 天氣現象資料不足');
     }
-    // 🔥 Extract Max and Min Temp
+
+    // 2️⃣ 計算今天的最高 / 最低溫度
     let maxTemp = null;
     let minTemp = null;
-    const tElement = locationData.WeatherElement.find(el => el.ElementName === 'T');
 
-    if (Array.isArray(tElement?.Time) && tElement.Time.length > 0) {
+    if (Array.isArray(tElement?.Time)) {
+      const today = new Date().toISOString().split('T')[0]; // e.g. "2025-04-15"
       const temps = tElement.Time
-        .flatMap(t => t.ElementValue?.map(ev => parseFloat(ev.Value)) || [])
+        .filter(period => period.DataTime?.startsWith(today))
+        .map(period => parseFloat(period.ElementValue?.[0]?.Value))
         .filter(t => !isNaN(t));
-    
+
       if (temps.length > 0) {
         maxTemp = Math.max(...temps);
         minTemp = Math.min(...temps);
-        console.log('🌡️ maxTemp:', maxTemp, 'minTemp:', minTemp);
       } else {
         console.warn('⚠️ 找不到有效的溫度值');
       }
     } else {
       console.warn('⚠️ 沒有 T 元素或時間區段');
-    }
-    
-
-  
-    // 🔥 Extract Feels-like temperature
-    let feelsLike = null;
-    if (atElement?.Time?.[0]?.ElementValue?.[0]?.Value) {
-      const temp = parseFloat(atElement.Time[0].ElementValue[0].Value);
-      if (!isNaN(temp)) {
-        feelsLike = temp;
-      }
     }
 
     const result = {
@@ -551,17 +556,19 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       afternoon,
       night,
       maxTemp,
-      minTemp,
-      feelsLike
+      minTemp
     };
-    console.log('🌤️ Final parsed weather:', result); // optional debug
-    return result;
 
-    } catch (error) {
+    console.log('🌤️ Final parsed weather:', result);
+    return result;
+  } catch (error) {
     console.error('❗ 取得天氣預報時發生錯誤:', error.message);
     return null;
   }
 }
+
+
+
   
 
 
@@ -746,32 +753,21 @@ function getSolarTerm(date) {
 
 const getRandomItem = arr => arr[Math.floor(Math.random() * arr.length)];
 
-function getTemperatureMessage(feelsLikeCelsius) {
-  if (feelsLikeCelsius === null || isNaN(feelsLikeCelsius)) {
-    return '氣溫不明，但人還是要出門'; // fallback
-  }
+function getTemperatureCommentByRange(min, max) {
+  if (min == null || max == null) return '氣溫不明 → 擺爛靠直覺';
 
+  const avg = (min + max) / 2;
   let key = '';
-  if (feelsLikeCelsius >= 35) {
-    key = 'very_hot';
-  } else if (feelsLikeCelsius >= 30) {
-    key = 'hot';
-  } else if (feelsLikeCelsius >= 25) {
-    key = 'warm';
-  } else if (feelsLikeCelsius >= 20) {
-    key = 'cool';
-  } else if (feelsLikeCelsius >= 15) {
-    key = 'chilly';
-  } else {
-    key = 'cold';
-  }
 
-  const messages = temperatureMessages[key];
-  if (messages && messages.length > 0) {
-    return getRandomItem(messages);
-  } else {
-    return '氣溫正常發揮，靠實力擺攤'; // fallback if array is empty
-  }
+  if (avg >= 35) key = 'very_hot';
+  else if (avg >= 30) key = 'hot';
+  else if (avg >= 25) key = 'warm';
+  else if (avg >= 20) key = 'cool';
+  else if (avg >= 15) key = 'chilly';
+  else key = 'cold';
+
+  const list = temperatureMessages[key] || [];
+  return list.length > 0 ? list[Math.floor(Math.random() * list.length)] : '靠毅力撐場';
 }
 
 
