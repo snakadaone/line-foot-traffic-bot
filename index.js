@@ -145,12 +145,6 @@ app.post('/webhook', express.json(), async (req, res) => {
       // 取得農曆日期
       const lunar = require('chinese-lunar');
 
-      // 取得節氣
-      const solarTermLine = solarTermInfo.today
-        ? `🏮 節氣：${solarTermInfo.today}（距離下個節氣「${solarTermInfo.nextTerm}」還有 ${solarTermInfo.daysUntilNext} 天）`
-        : `🏮 節氣：${solarTermInfo.prevTerm}已過 ${solarTermInfo.daysSincePrev} 天，距離下個節氣「${solarTermInfo.nextTerm}」還有 ${solarTermInfo.daysUntilNext} 天`;
-
-
     
       // ✅ Change to wait for confirmation
       userState[userId].step = 'confirm';
@@ -187,9 +181,6 @@ app.post('/webhook', express.json(), async (req, res) => {
       const lunarMonthName = getLunarMonthName(lunarMonth);
       const lunarDayName = getLunarDayName(lunarDay);
       const lunarDate = lunarMonthName && lunarDayName ? `${lunarMonthName}${lunarDayName}` : '未知日期';
-
-
-      const solarTerm = getSolarTerm(currentDate); 
   
       // 1️⃣ Confirm hours
       await replyText(event.replyToken, `✅ 營業時間確認完成！\n${start} ~ ${end}`);
@@ -249,23 +240,17 @@ app.post('/webhook', express.json(), async (req, res) => {
 
 
 
-
-
-
-
-
       const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
       const dayOfWeek = dayNames[currentDate.getDay()];
       const dateHeader = `📅 今天是 ${currentDate.getMonth() + 1}月${currentDate.getDate()}日（星期${dayOfWeek}）｜農曆${lunarDate}`;
       
-      const fullMessage =
-      `${dateHeader}
+      const fullMessage = `${dateHeader}
       ${specialDayText}
       📍 地點：${city}${districtOnly}
       ⛅ 天氣：
-        早上 ${addWeatherEmoji(weather.morning)}
-        下午 ${addWeatherEmoji(weather.afternoon)}
-        晚上 ${addWeatherEmoji(weather.night)}
+      早上 ${addWeatherEmoji(weather.morning)}
+      下午 ${addWeatherEmoji(weather.afternoon)}
+      晚上 ${addWeatherEmoji(weather.night)}
       ${temperatureLine}
       
       💡 今日吉日建議：
@@ -273,7 +258,7 @@ app.post('/webhook', express.json(), async (req, res) => {
       ❌ 忌：高估人潮、自信開滿備貨
       
       🔥【人流預測】
-      🟡 等級：${prediction.level}（${prediction.suggestion.includes('悲觀') ? '還不錯，但別幻想暴富' : '隨緣出貨，隨便贏'}）
+      🟡 等級：${prediction.level}(${prediction.suggestion.includes('悲觀') ? '還不錯，但別幻想暴富' : '隨緣出貨，隨便贏'}）
       📦 建議：${prediction.suggestion}
       
       🧙‍♀️ 今日爛籤：
@@ -532,21 +517,31 @@ async function getWeatherForecast(cityOnly, districtOnly) {
       night: []
     };
 
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const todayStr = today.toISOString().split('T')[0];
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
 
     for (const period of weatherDesc.Time) {
       const start = new Date(period.StartTime);
-      if (!period.ElementValue?.[0]?.WeatherDescription) continue;
-      if (!period.StartTime.startsWith(todayStr)) continue;
-
       const hour = start.getHours();
-      const description = period.ElementValue[0].WeatherDescription;
+      const dateStr = period.StartTime.split('T')[0];
+      const description = period.ElementValue?.[0]?.WeatherDescription;
 
-      if (hour >= 6 && hour < 12) segments.morning.push(description);
-      else if (hour >= 12 && hour < 18) segments.afternoon.push(description);
-      else if (hour >= 18 || hour < 6) segments.night.push(description);
+      if (!description) continue;
+
+      if (dateStr === todayStr) {
+        if (hour >= 6 && hour < 12) segments.morning.push(description);
+        else if (hour >= 12 && hour < 18) segments.afternoon.push(description);
+        else if (hour >= 18) segments.night.push(description); // tonight
+      } else if (dateStr === tomorrowStr && hour < 6) {
+        segments.night.push(description); // early morning of tomorrow
+      }
     }
+
 
     function simplify(descList) {
       if (descList.length === 0) return '未知';
@@ -580,16 +575,31 @@ async function getWeatherForecast(cityOnly, districtOnly) {
     const maxTemp = temps.length ? Math.max(...temps) : null;
     const minTemp = temps.length ? Math.min(...temps) : null;
 
+    // 💬 Debug logs to inspect segmented descriptions
+    console.log('🌞 Raw morning descriptions:', segments.morning);
+    console.log('🌇 Raw afternoon descriptions:', segments.afternoon);
+    console.log('🌙 Raw night descriptions:', segments.night);
+
+    // 🧠 Simplify each before assigning
+    const morningDesc = simplify(segments.morning);
+    const afternoonDesc = simplify(segments.afternoon);
+    const nightDesc = simplify(segments.night);
+
+    console.log('📝 Simplified morning:', morningDesc);
+    console.log('📝 Simplified afternoon:', afternoonDesc);
+    console.log('📝 Simplified night:', nightDesc);
+
     const result = {
-      morning: simplify(segments.morning),
-      afternoon: simplify(segments.afternoon),
-      night: simplify(segments.night),
+      morning: morningDesc,
+      afternoon: afternoonDesc,
+      night: nightDesc,
       maxTemp,
       minTemp
     };
 
     console.log('🌤️ Final parsed weather:', result);
     return result;
+
   } catch (err) {
     console.error('❗ 取得天氣預報失敗:', err.message);
     return null;
@@ -797,47 +807,6 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
   
   
 }
-
-function getSolarTermInfo(date) {
-  const solarTerms = require('./data/solar_terms_2025.json');
-  const todayStr = formatDate(date);
-  const termEntries = Object.entries(solarTerms).sort(([a], [b]) => a.localeCompare(b));
-
-  let todayTerm = solarTerms[todayStr] || null;
-  let prevTerm = null;
-  let nextTerm = null;
-  let prevDate = null;
-  let nextDate = null;
-
-  for (let i = 0; i < termEntries.length; i++) {
-    const [dateStr, name] = termEntries[i];
-    const d = new Date(dateStr);
-
-    if (d.toISOString().split('T')[0] === todayStr) {
-      todayTerm = name;
-    } else if (d < date) {
-      prevTerm = name;
-      prevDate = d;
-    } else if (d > date && !nextTerm) {
-      nextTerm = name;
-      nextDate = d;
-    }
-  }
-
-  const daysUntilNext = nextDate ? Math.ceil((nextDate - date) / (1000 * 60 * 60 * 24)) : null;
-  const daysSincePrev = prevDate ? Math.floor((date - prevDate) / (1000 * 60 * 60 * 24)) : null;
-
-  return {
-    today: todayTerm,
-    nextTerm,
-    daysUntilNext,
-    prevTerm,
-    daysSincePrev
-  };
-}
-
-
-
 
 const getRandomItem = arr => arr[Math.floor(Math.random() * arr.length)];
 
