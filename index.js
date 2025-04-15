@@ -146,7 +146,10 @@ app.post('/webhook', express.json(), async (req, res) => {
       const lunar = require('chinese-lunar');
 
       // 取得節氣
-      const solarTerm = getSolarTerm(currentDate); // You'll define this helper next
+      const solarTermLine = solarTermInfo.today
+        ? `🏮 節氣：${solarTermInfo.today}（距離下個節氣「${solarTermInfo.nextTerm}」還有 ${solarTermInfo.daysUntilNext} 天）`
+        : `🏮 節氣：${solarTermInfo.prevTerm}已過 ${solarTermInfo.daysSincePrev} 天，距離下個節氣「${solarTermInfo.nextTerm}」還有 ${solarTermInfo.daysUntilNext} 天`;
+
 
     
       // ✅ Change to wait for confirmation
@@ -207,7 +210,33 @@ app.post('/webhook', express.json(), async (req, res) => {
       });
   
       const specialDayList = getSpecialDayInfo(formatDate(currentDate), specialDayMap);
-      const specialDayText = specialDayList.length > 0 ? `🎯 特別日子：${specialDayList.join('、')}\n` : '';
+      let specialDayText = '';
+
+      if (specialDayList.length > 0) {
+        // ✅ Format multiple items vertically
+        specialDayText = '🎯 特別日子：\n' + specialDayList.map(d => `・${d}`).join('\n');
+      } else {
+        const nextInfo = getNextSpecialDayInfo(formatDate(currentDate), specialDayMap);
+        const noDayPhrases = require('./data/no_special_day_phrases.json').no_special_day_phrases;
+      
+        let phrase = getRandomItem(noDayPhrases);
+      
+        // 避免與昨天相同
+        if (userState[userId]?.lastNoSpecialDayPhrase === phrase && noDayPhrases.length > 1) {
+          const alt = noDayPhrases.filter(p => p !== phrase);
+          phrase = getRandomItem(alt);
+        }
+      
+        userState[userId].lastNoSpecialDayPhrase = phrase;
+      
+        const countdownLine = nextInfo
+          ? `⏳ 下個特別日子是「${nextInfo.name}」，還有 ${nextInfo.daysUntil} 天`
+          : '📆 近期沒有特別日子。';
+      
+        specialDayText = `🎯 特別日子：\n${phrase}\n${countdownLine}`;
+      }
+      
+
       let temperatureLine = '';
       if (weather.maxTemp != null || weather.minTemp != null) {
         const max = weather.maxTemp != null ? `${weather.maxTemp}°C` : '未知';
@@ -225,29 +254,31 @@ app.post('/webhook', express.json(), async (req, res) => {
 
 
 
-        const fullMessage = 
-        `📅 今天是 ${currentDate.getMonth() + 1}月${currentDate.getDate()}日｜農曆${lunarDate}
-        🏮 節氣：${solarTerm}
-        🎌 西曆：${getDayTypeText(dayType)}
-        🧧 傳統：${note || '沒有節日？那就自創理由擺！'}
-        ${specialDayText}
+      const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+      const dayOfWeek = dayNames[currentDate.getDay()];
+      const dateHeader = `📅 今天是 ${currentDate.getMonth() + 1}月${currentDate.getDate()}日（星期${dayOfWeek}）｜農曆${lunarDate}`;
+      
+      const fullMessage =
+      `${dateHeader}
+      ${specialDayText}
+      📍 地點：${city}${districtOnly}
+      ⛅ 天氣：
+        早上 ${addWeatherEmoji(weather.morning)}
+        下午 ${addWeatherEmoji(weather.afternoon)}
+        晚上 ${addWeatherEmoji(weather.night)}
+      ${temperatureLine}
+      
+      💡 今日吉日建議：
+      ✅ 吉：擺攤、搶客、亂喊優惠
+      ❌ 忌：高估人潮、自信開滿備貨
+      
+      🔥【人流預測】
+      🟡 等級：${prediction.level}（${prediction.suggestion.includes('悲觀') ? '還不錯，但別幻想暴富' : '隨緣出貨，隨便贏'}）
+      📦 建議：${prediction.suggestion}
+      
+      🧙‍♀️ 今日爛籤：
+      ${prediction.quote}`;
         
-        📍 地點：${city}${districtOnly}
-        ⛅ 天氣：早上 ${weather.morning} / 下午 ${weather.afternoon} / 晚上 ${weather.night}
-        ${temperatureLine}
-        
-        💡 今日吉日建議：
-        ✅ 吉：擺攤、搶客、亂喊優惠
-        ❌ 忌：高估人潮、自信開滿備貨
-        
-        🔥【人流預測】
-        🟡 等級：${prediction.level}（${prediction.suggestion.includes('悲觀') ? '還不錯，但別幻想暴富' : '隨緣出貨，隨便贏'}）
-        📦 建議：${prediction.suggestion}
-        
-        🧙‍♀️ 今日爛籤：
-        ${prediction.quote}`;
-        
-  
       await pushText(userId, fullMessage);
       delete userState[userId];
     } else {
@@ -514,12 +545,24 @@ async function getWeatherForecast(cityOnly, districtOnly) {
 
       if (hour >= 6 && hour < 12) segments.morning.push(description);
       else if (hour >= 12 && hour < 18) segments.afternoon.push(description);
-      else if (hour >= 18 && hour < 24) segments.night.push(description);
+      else if (hour >= 18 || hour < 6) segments.night.push(description);
     }
 
     function simplify(descList) {
-      return descList.length > 0 ? descList[0].split('。')[0] : '未知';
+      if (descList.length === 0) return '未知';
+    
+      const countMap = {};
+      for (const desc of descList) {
+        const short = desc.split('。')[0]; // 取主描述：例如「晴」、「多雲」、「短暫陣雨」
+        countMap[short] = (countMap[short] || 0) + 1;
+      }
+    
+      // 找出出現最多次的主描述
+      const sorted = Object.entries(countMap).sort((a, b) => b[1] - a[1]);
+      return sorted[0][0]; // 回傳出現最多次的描述
     }
+    
+    
 
     // Extract temperature min/max
     const temps = [];
@@ -668,10 +711,34 @@ function getSpecialDayInfo(dateStr, specialDayMap) {
   const todaySpecials = specialDayMap[dateStr];
   if (!todaySpecials) return [];
 
-  // 將不同類型的 special day 展平為 array
-  return Object.entries(todaySpecials).flatMap(([type, names]) => {
-    return names.map(name => `${name}（${type}）`);
-  });
+  return Object.values(todaySpecials).flat(); // 只取名字，不顯示分類
+}
+
+
+function getNextSpecialDayInfo(todayStr, specialDayMap) {
+  const dates = Object.keys(specialDayMap).sort(); // 日期升序
+  for (let dateStr of dates) {
+    if (dateStr > todayStr) {
+      const names = Object.values(specialDayMap[dateStr]).flat();
+      return {
+        name: names[0] || '未知',
+        daysUntil: Math.ceil((new Date(dateStr) - new Date(todayStr)) / (1000 * 60 * 60 * 24))
+      };
+    }
+  }
+  return null;
+}
+
+
+function addWeatherEmoji(desc) {
+  if (desc.includes('晴')) return `☀️ ${desc}`;
+  if (desc.includes('多雲')) return `⛅ ${desc}`;
+  if (desc.includes('陰')) return `☁️ ${desc}`;
+  if (desc.includes('雨')) return `🌧️ ${desc}`;
+  if (desc.includes('雷')) return `⛈️ ${desc}`;
+  if (desc.includes('雪')) return `❄️ ${desc}`;
+  if (desc.includes('風')) return `💨 ${desc}`;
+  return `🌈 ${desc}`; // fallback emoji
 }
 
 function predictFootTraffic({ districtProfile, dayType, weather, start, end, boostTomorrowHoliday }) {
@@ -731,11 +798,46 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
   
 }
 
-function getSolarTerm(date) {
+function getSolarTermInfo(date) {
   const solarTerms = require('./data/solar_terms_2025.json');
   const todayStr = formatDate(date);
-  return solarTerms[todayStr] || '清明過後懶得動';
+  const termEntries = Object.entries(solarTerms).sort(([a], [b]) => a.localeCompare(b));
+
+  let todayTerm = solarTerms[todayStr] || null;
+  let prevTerm = null;
+  let nextTerm = null;
+  let prevDate = null;
+  let nextDate = null;
+
+  for (let i = 0; i < termEntries.length; i++) {
+    const [dateStr, name] = termEntries[i];
+    const d = new Date(dateStr);
+
+    if (d.toISOString().split('T')[0] === todayStr) {
+      todayTerm = name;
+    } else if (d < date) {
+      prevTerm = name;
+      prevDate = d;
+    } else if (d > date && !nextTerm) {
+      nextTerm = name;
+      nextDate = d;
+    }
+  }
+
+  const daysUntilNext = nextDate ? Math.ceil((nextDate - date) / (1000 * 60 * 60 * 24)) : null;
+  const daysSincePrev = prevDate ? Math.floor((date - prevDate) / (1000 * 60 * 60 * 24)) : null;
+
+  return {
+    today: todayTerm,
+    nextTerm,
+    daysUntilNext,
+    prevTerm,
+    daysSincePrev
+  };
 }
+
+
+
 
 const getRandomItem = arr => arr[Math.floor(Math.random() * arr.length)];
 
