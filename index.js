@@ -138,10 +138,6 @@ app.post('/webhook', express.json(), async (req, res) => {
       const { start, end } = userState[userId];
       const currentDate = new Date();
 
-      // 取得節日與補班資訊
-      const holidayMap = require('./data/2025_holidays.json');
-      const { dayType, boostTomorrowHoliday, note } = analyzeDayType(currentDate, holidayMap);
-
       // 取得農曆日期
       const lunar = require('chinese-lunar');
 
@@ -186,19 +182,19 @@ app.post('/webhook', express.json(), async (req, res) => {
       await replyText(event.replyToken, `✅ 營業時間確認完成！\n${start} ~ ${end}`);
   
       // 2️⃣ Calculate prediction
-      const holidayMap = require('./data/2025_holidays.json');
       const specialDayMap = require('./data/special_days_2025.json');
-      const { dayType, boostTomorrowHoliday, note } = analyzeDayType(currentDate, holidayMap);
+      const { dayType, boostTomorrowHoliday, note } = analyzeDayType(currentDate, specialDayMap);
       const profile = getDistrictProfile(city, districtOnly);
   
       const prediction = predictFootTraffic({
         districtProfile: profile,
-        dayType,
+        dayType: 'workday', // temporary placeholder
         weather,
         start,
         end,
-        boostTomorrowHoliday
+        boostTomorrowHoliday: 0
       });
+      
   
       const specialDayList = getSpecialDayInfo(formatDate(currentDate), specialDayMap);
       let specialDayText = '';
@@ -682,34 +678,35 @@ function getLunarDayName(day) {
   return ten + num;
 }
 
+const weatherMessages = require('./data/weather_messages.json');
 
-function analyzeDayType(today, holidayMap) {
+function analyzeDayType(today, specialDayMap) {
   const todayStr = formatDate(today);
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
   const tomorrowStr = formatDate(tomorrow);
 
-  const todayInfo = holidayMap[todayStr] || {};
-  const tomorrowInfo = holidayMap[tomorrowStr] || {};
+  const todayTags = specialDayMap[todayStr] || [];
+  const tomorrowTags = specialDayMap[tomorrowStr] || [];
 
   const isTodayWeekend = today.getDay() === 0 || today.getDay() === 6;
-  const isTomorrowHoliday = tomorrowInfo.status === 'holiday';
+  const isTodayHoliday = todayTags.includes('國定假日') || todayTags.includes('連假');
+  const isTodayMakeup = todayTags.includes('補班');
+  const isTomorrowHoliday = tomorrowTags.includes('國定假日') || tomorrowTags.includes('連假');
 
   const boostTomorrowHoliday = isTomorrowHoliday ? 1 : 0;
 
   const dayType =
-    todayInfo.status === 'holiday' ? 'holiday' :
-    todayInfo.status === 'makeupWorkday' ? 'makeupWorkday' :
+    isTodayHoliday ? 'holiday' :
+    isTodayMakeup ? 'makeupWorkday' :
     isTodayWeekend ? 'weekend' : 'workday';
 
   return {
     dayType,
-    note: todayInfo.note || null,
-    boostTomorrowHoliday
+    boostTomorrowHoliday,
+    note: todayTags.join(', ') || null
   };
 }
-
-const weatherMessages = require('./data/weather_messages.json');
 
 function getRandomWeatherComment(condition) {
   const list = weatherMessages[condition];
