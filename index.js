@@ -129,13 +129,22 @@ app.post('/webhook', express.json(), async (req, res) => {
     const selected = text.replace('選擇業種_', '');
     userState[userId].industry = selected;
     userState[userId].step = 'done'; // ✅ finished setup
+  
+    // ✅ reply with confirmation message
+    await replyConfirmIndustry(event.replyToken, `已選擇業種：${selected}`);
   }
+  
   
   
   else if (text === '跳過業種選擇') {
-    userState[userId].industry = null; // or '未選擇'
-    userState[userId].step = 'done'; // ✅ finished setup  
+    userState[userId].industry = null;
+    userState[userId].step = 'done';
+  
+    // 🟢 Immediately send prediction
+    const message = await generatePredictionMessage(userId);
+    await pushTextMessage(userId, message);
   }
+  
   
   
   
