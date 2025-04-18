@@ -907,9 +907,19 @@ async function sendFinalPrediction(userId, replyToken = null) {
     hasSpecialDay
   });
 
-  const specialDayText = specialDayList.length > 0
-    ? '🎯 特別日子：\n' + specialDayList.map(d => `・${d}`).join('\n')
-    : `🎯 特別日子：\n${getRandomItem(require('./data/no_special_day_phrases.json').no_special_day_phrases)}`;
+  let specialDayText = '';
+  if (specialDayList.length > 0) {
+    specialDayText = '🎯 特別日子：\n' + specialDayList.map(d => `・${d}`).join('\n');
+  } else {
+    const fallback = getRandomItem(require('./data/no_special_day_phrases.json').no_special_day_phrases);
+    const nextSpecial = getNextSpecialDayInfo(formatDate(currentDate), specialDayMap);
+    if (nextSpecial) {
+      specialDayText = `🎯 特別日子：\n${fallback}\n（距離下個「${nextSpecial.name}」還有 ${nextSpecial.daysUntil} 天）`;
+    } else {
+    specialDayText = `🎯 特別日子：\n${fallback}`;
+  }
+}
+
 
   const weatherBlock = formatWeatherBlock(user.districtOnly, user.weather);
   const yiJi = getRandomYiJiPair();
