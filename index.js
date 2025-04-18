@@ -20,6 +20,7 @@ app.get('/myip', async (req, res) => {
 const port = process.env.PORT || 3000;
 const districtProfiles = require('./data/district_profiles.json');
 const temperatureMessages = require('./data/temperature_messages.json');
+const yiJiPhrases = require('./data/yi_ji_phrases.json');
 
 
 
@@ -124,6 +125,17 @@ app.post('/webhook', express.json(), async (req, res) => {
     await sendTimeQuickReply(event.replyToken, '請選擇營業結束時間：', 'end', 'second');
   }
   
+  else if (text?.startsWith('選擇業種_')) {
+    const selected = text.replace('選擇業種_', '');
+    userState[userId].industry = selected;
+  
+    await replyText(event.replyToken, `✅ 已選擇攤位類型：${selected}\n感謝您完成設定！`);
+    userState[userId].step = 'confirm'; // proceed to confirmation
+  } else if (text === '跳過業種選擇') {
+    await replyText(event.replyToken, '✅ 已跳過攤位類型選擇\n感謝您完成設定！');
+    userState[userId].step = 'confirm'; // proceed to confirmation
+  }
+  
   // 使用者點選時間
   else if (postbackData?.startsWith('SELECT_TIME_')) {
     const hour = parseInt(postbackData.replace('SELECT_TIME_', ''));
@@ -136,28 +148,26 @@ app.post('/webhook', express.json(), async (req, res) => {
     } else if (userState[userId]?.step === 'end') {
       userState[userId].end = label;
       const { start, end } = userState[userId];
-      const currentDate = new Date();
 
-      // 取得農曆日期
-      const lunar = require('chinese-lunar');
+      // ✅ Move to next step: industry selection
+      userState[userId].step = 'industry';
 
-    
-      // ✅ Change to wait for confirmation
-      userState[userId].step = 'confirm';
-    
-      // ✅ Show quick reply with "確認" or "重新設定"
-      await replyConfirmTime(event.replyToken, start, end);
+      // ✅ Prompt user to optionally choose their business category
+      await sendIndustryQuickReply(event.replyToken);
     }
-      
   }
 
+  else if (postbackData) {
+    await replyText(event.replyToken, '⚠️ 無法識別的操作，請重新操作一次。');
+  }
+  
   // 初始歡迎訊息
   else if (text === '開始' || text === 'hi' || text === '你好') {
     await replyText(event.replyToken, `👋 歡迎使用人流預測機器人！
 
-請依下列步驟完成設定：
-1️⃣ 傳送您的地點（使用 LINE「位置訊息」功能)
-2️⃣ 輸入「設定營業時間」並選擇時間`);
+    請依下列步驟完成設定：
+     1️⃣ 傳送您的地點（使用 LINE「位置訊息」功能)
+     2️⃣ 輸入「設定營業時間」並選擇時間`);
   }
   else if (text === '確認營業時間') {
     const { start, end, city, districtOnly, weather } = userState[userId] || {};
@@ -185,18 +195,23 @@ app.post('/webhook', express.json(), async (req, res) => {
       const specialDayMap = require('./data/special_days_2025.json');
       const { dayType, boostTomorrowHoliday, note } = analyzeDayType(currentDate, specialDayMap);
       const profile = getDistrictProfile(city, districtOnly);
+
+      const specialDayList = getSpecialDayInfo(formatDate(currentDate), specialDayMap);
+      const hasSpecialDay = specialDayList.length > 0;
+
   
       const prediction = predictFootTraffic({
         districtProfile: profile,
-        dayType: 'workday', // temporary placeholder
+        dayType,
         weather,
         start,
         end,
-        boostTomorrowHoliday: 0
+        boostTomorrowHoliday,
+        hasSpecialDay
       });
+
       
-  
-      const specialDayList = getSpecialDayInfo(formatDate(currentDate), specialDayMap);
+
       let specialDayText = '';
 
       if (specialDayList.length > 0) {
@@ -224,34 +239,19 @@ app.post('/webhook', express.json(), async (req, res) => {
       }
       
 
-      let temperatureLine = '';
-      if (weather.maxTemp != null || weather.minTemp != null) {
-        const max = weather.maxTemp != null ? `${weather.maxTemp}°C` : '未知';
-        const min = weather.minTemp != null ? `${weather.minTemp}°C` : '未知';
-        const comment = getTemperatureCommentByRange(weather.minTemp, weather.maxTemp);
-        temperatureLine = `🌡️ 溫度範圍：${min} ~ ${max} → ${comment}`;
-      } else {
-        temperatureLine = '🌡️ 溫度範圍：氣溫不明 → 擺爛靠直覺';
-      }
-
-
-
       const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
       const dayOfWeek = dayNames[currentDate.getDay()];
       const dateHeader = `📅 今天是 ${currentDate.getMonth() + 1}月${currentDate.getDate()}日（星期${dayOfWeek}）｜農曆${lunarDate}`;
-      
+      const yiJi = getRandomYiJiPair();
+
       const fullMessage = `${dateHeader}
       ${specialDayText}
-      📍 地點：${city}${districtOnly}
-      ⛅ 天氣：
-      早上 ${addWeatherEmoji(weather.morning)}
-      下午 ${addWeatherEmoji(weather.afternoon)}
-      晚上 ${addWeatherEmoji(weather.night)}
-      ${temperatureLine}
       
-      💡 今日吉日建議：
-      ✅ 吉：擺攤、搶客、亂喊優惠
-      ❌ 忌：高估人潮、自信開滿備貨
+      ${formatWeatherBlock(districtOnly, weather)}
+      
+      📛 宜忌：
+      ✅ 宜：${yiJi.yi}
+      ❌ 忌：${yiJi.ji}
       
       🔥【人流預測】
       🟡 等級：${prediction.level}(${prediction.suggestion.includes('悲觀') ? '還不錯，但別幻想暴富' : '隨緣出貨，隨便贏'}）
@@ -487,6 +487,50 @@ const cityToDatasetId = {
   '連江縣': 'F-D0047-081'
 };
 
+async function sendIndustryQuickReply(replyToken) {
+  const url = 'https://api.line.me/v2/bot/message/reply';
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`
+  };
+
+  const body = {
+    replyToken,
+    messages: [
+      {
+        type: 'text',
+        text: '可選擇您經營的攤位類型（可跳過）：',
+        quickReply: {
+          items: [
+            {
+              type: 'action',
+              action: { type: 'message', label: '🍜 餐飲', text: '選擇業種_餐飲' }
+            },
+            {
+              type: 'action',
+              action: { type: 'message', label: '🛠 服務', text: '選擇業種_服務' }
+            },
+            {
+              type: 'action',
+              action: { type: 'message', label: '🧺 商品', text: '選擇業種_商品' }
+            },
+            {
+              type: 'action',
+              action: { type: 'message', label: '📣 推廣', text: '選擇業種_推廣' }
+            },
+            {
+              type: 'action',
+              action: { type: 'message', label: '⏭ 跳過', text: '跳過業種選擇' }
+            }
+          ]
+        }
+      }
+    ]
+  };
+
+  await axios.post(url, body, { headers });
+}
+
 async function getWeatherForecast(cityOnly, districtOnly) {
   try {
     const datasetId = cityToDatasetId[cityOnly];
@@ -714,6 +758,12 @@ function getRandomWeatherComment(condition) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
+function getRandomYiJiPair() {
+  const yi = getRandomItem(yiJiPhrases.yi);
+  const ji = getRandomItem(yiJiPhrases.ji);
+  return { yi, ji };
+}
+
 function getSpecialDayInfo(dateStr, specialDayMap) {
   const todaySpecials = specialDayMap[dateStr];
   if (!todaySpecials) return [];
@@ -748,62 +798,76 @@ function addWeatherEmoji(desc) {
   return `🌈 ${desc}`; // fallback emoji
 }
 
-function predictFootTraffic({ districtProfile, dayType, weather, start, end, boostTomorrowHoliday }) {
+function formatWeatherBlock(district, weather) {
+  const min = weather.minTemp != null ? `${weather.minTemp}°C` : '未知';
+  const max = weather.maxTemp != null ? `${weather.maxTemp}°C` : '未知';
+  return `⛅ ${district} 天氣
+🌞 早：${addWeatherEmoji(weather.morning)}（${min}~${max}）
+🌆 午：${addWeatherEmoji(weather.afternoon)}（${min}~${max}）
+🌙 晚：${addWeatherEmoji(weather.night)}（${min}~${max}）`;
+}
+
+function predictFootTraffic({ districtProfile, dayType, weather, start, end, boostTomorrowHoliday, hasSpecialDay }) {
   const type = districtProfile?.type || '未知';
   const features = districtProfile?.features || [];
 
   let score = 0;
 
-  // 🎯 區域類型
-  if (type.includes('觀光')) score += 2;
-  if (type.includes('商業')) score += 1;
+  // 🎯 [1] 區域屬性「基底分數」
+  if (type.includes('觀光')) score += 3;
+  if (type.includes('商業')) score += 2;
+  if (type.includes('地方生活型')) score += 1;
+  if (type.includes('傳統商圈')) score += 1;
   if (type.includes('學區')) score += (dayType === 'workday' ? 1 : -1);
 
-  // 🗓️ 今天是週末/假日就加分
+  // 🌦️ [2] 天氣扣分（最多 -3）
+  const badWeatherCount = [weather.morning, weather.afternoon, weather.night]
+    .filter(w => w.includes('雨') || w.includes('雷') || w.includes('風')).length;
+  score -= badWeatherCount;
+
+  // 🗓️ 日期類型加分
   if (dayType === 'weekend' || dayType === 'holiday') score += 2;
   if (dayType === 'makeupWorkday') score -= 1;
 
-  // 🎁 明天放假，今天加分
+  // 🎯 [3] 特別日子/明天放假 → 加分
+  if (hasSpecialDay) score += 1;
   if (boostTomorrowHoliday) score += 1;
 
-  // 🌧️ 天氣扣分
-  const badWeather = [weather.morning, weather.afternoon, weather.night]
-    .filter(w => w.includes('雨') || w.includes('雷') || w.includes('風'))
-    .length;
-  score -= badWeather;
-
-  // 🕒 時段加分
+  // 🕒 [4] 營業時間評估
   const startHour = parseInt(start);
   const endHour = parseInt(end);
-  if (startHour >= 10 && endHour >= 18) score += 1;
+  const hoursOpen = endHour - startHour;
+  if (hoursOpen >= 6 && startHour <= 11 && endHour >= 18) {
+    score += 1;
+  }
 
+  // 📈 等級定義
   let level = '';
   let suggestion = '';
-  if (score >= 4) {
+  if (score >= 6) {
     level = '高';
     suggestion = '多準備一些，可能會有好生意';
-  } else if (score >= 2) {
+  } else if (score >= 3) {
     level = '中';
     suggestion = '照常準備即可';
   } else {
     level = '低';
     suggestion = '準備少量就好，節省成本';
   }
-  
+
   const quotes = [
     '「人多的時候你是邊角，人少的時候你是全場焦點。乾脆擺著等奇蹟。」',
     '「等的不是客，是運氣。」',
     '「沒賣完不是你廢，是人潮在擺爛。」'
   ];
-  
+
   return {
     level,
     suggestion,
     quote: quotes[Math.floor(Math.random() * quotes.length)]
   };
-  
-  
 }
+
 
 const getRandomItem = arr => arr[Math.floor(Math.random() * arr.length)];
 
