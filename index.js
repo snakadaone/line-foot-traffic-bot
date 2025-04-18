@@ -128,15 +128,13 @@ app.post('/webhook', express.json(), async (req, res) => {
   else if (text?.startsWith('選擇業種_')) {
     const selected = text.replace('選擇業種_', '');
     userState[userId].industry = selected;
-  
-    await replyConfirmIndustry(event.replyToken, `已選擇攤位類型：${selected}`);
-    userState[userId].step = 'confirm';
+    userState[userId].step = 'done'; // ✅ finished setup
   }
   
   
   else if (text === '跳過業種選擇') {
-    await replyConfirmIndustry(event.replyToken, '已跳過攤位類型選擇');
-    userState[userId].step = 'confirm';
+    userState[userId].industry = null; // or '未選擇'
+    userState[userId].step = 'done'; // ✅ finished setup  
   }
   
   
@@ -175,16 +173,17 @@ app.post('/webhook', express.json(), async (req, res) => {
   }
   else if (text === '確認營業時間') {
     if (userState[userId]?.step === 'confirm') {
-      // Move to industry selection step
-      userState[userId].step = 'industry';
+      // Move to industry selection only if not yet selected
       await sendIndustryQuickReply(event.replyToken);
-    } else if (userState[userId]?.step === 'industry') {
-      // Industry was already selected or skipped, now send prediction
+      userState[userId].step = 'industry';
+    } else if (userState[userId]?.step === 'industry' || userState[userId]?.step === 'done') {
+      // ✅ Industry was selected or skipped, now safe to send prediction
       await sendFinalPrediction(userId, event.replyToken);
     } else {
       await replyText(event.replyToken, '⚠️ 尚未完成時間設定，請重新操作。');
     }
   }
+  
   
   
   
