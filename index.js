@@ -174,22 +174,18 @@ app.post('/webhook', express.json(), async (req, res) => {
      2️⃣ 輸入「設定營業時間」並選擇時間`);
   }
   else if (text === '確認營業時間') {
-    const step = userState[userId]?.step;
-  
-    if (step === 'confirm') {
-      // ✅ Everything ready, send final prediction
-      userState[userId].step = 'done'; // mark setup as complete
+    if (userState[userId]?.step === 'confirm') {
+      // Move to industry selection step
+      userState[userId].step = 'industry';
+      await sendIndustryQuickReply(event.replyToken);
+    } else if (userState[userId]?.step === 'industry') {
+      // Industry was already selected or skipped, now send prediction
       await sendFinalPrediction(userId, event.replyToken);
-    } else if (step === 'done') {
-      await replyText(event.replyToken, '✅ 您已完成設定並收到預測囉！如需重新設定請輸入「設定營業時間」。');
-    } else if (step === 'start' || step === 'end') {
-      await replyText(event.replyToken, '⚠️ 尚未完成時間設定，請重新操作。');
-    } else if (step === 'industry') {
-      await replyText(event.replyToken, '⚠️ 請先選擇或跳過攤位類型，再點選確認。');
     } else {
-      await replyText(event.replyToken, '⚠️ 尚未開始設定流程，請先傳送位置與設定營業時間。');
+      await replyText(event.replyToken, '⚠️ 尚未完成時間設定，請重新操作。');
     }
   }
+  
   
   
   
