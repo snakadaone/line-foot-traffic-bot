@@ -155,14 +155,9 @@ app.post('/webhook', express.json(), async (req, res) => {
       userState[userId].end = label;
       const { start, end } = userState[userId];
 
-      await replyConfirmTime(event.replyToken, start, end); // ✅ added
+      await replyConfirmTime(event.replyToken, start, end);
+      userState[userId].step = 'confirm'; // wait for user to confirm
 
-
-      // ✅ Move to next step: industry selection
-      userState[userId].step = 'industry';
-
-      // ✅ Prompt user to optionally choose their business category
-      await sendIndustryQuickReply(event.replyToken);
     }
   }
 
@@ -179,8 +174,15 @@ app.post('/webhook', express.json(), async (req, res) => {
      2️⃣ 輸入「設定營業時間」並選擇時間`);
   }
   else if (text === '確認營業時間') {
-    await sendFinalPrediction(userId, event.replyToken);
+    if (userState[userId]?.step === 'confirm') {
+      // move to industry selection
+      userState[userId].step = 'industry';
+      await sendIndustryQuickReply(event.replyToken);
+    } else {
+      await replyText(event.replyToken, '⚠️ 尚未完成時間設定，請重新操作。');
+    }
   }
+  
   
   
   
