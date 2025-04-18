@@ -129,12 +129,18 @@ app.post('/webhook', express.json(), async (req, res) => {
     const selected = text.replace('選擇業種_', '');
     userState[userId].industry = selected;
   
-    await replyText(event.replyToken, `✅ 已選擇攤位類型：${selected}\n感謝您完成設定！`);
-    userState[userId].step = 'confirm'; // proceed to confirmation
-  } else if (text === '跳過業種選擇') {
-    await replyText(event.replyToken, '✅ 已跳過攤位類型選擇\n感謝您完成設定！');
-    userState[userId].step = 'confirm'; // proceed to confirmation
+    await replyConfirmIndustry(event.replyToken, `已選擇攤位類型：${selected}`);
+    userState[userId].step = 'confirm';
   }
+  
+  
+  else if (text === '跳過業種選擇') {
+    await replyConfirmIndustry(event.replyToken, '已跳過攤位類型選擇');
+    userState[userId].step = 'confirm';
+  }
+  
+  
+  
   
   // 使用者點選時間
   else if (postbackData?.startsWith('SELECT_TIME_')) {
@@ -148,6 +154,9 @@ app.post('/webhook', express.json(), async (req, res) => {
     } else if (userState[userId]?.step === 'end') {
       userState[userId].end = label;
       const { start, end } = userState[userId];
+
+      await replyConfirmTime(event.replyToken, start, end); // ✅ added
+
 
       // ✅ Move to next step: industry selection
       userState[userId].step = 'industry';
@@ -170,102 +179,9 @@ app.post('/webhook', express.json(), async (req, res) => {
      2️⃣ 輸入「設定營業時間」並選擇時間`);
   }
   else if (text === '確認營業時間') {
-    const { start, end, city, districtOnly, weather } = userState[userId] || {};
-    if (start && end && city && districtOnly && weather) {
-      const currentDate = new Date();
-  
-      const chineseLunar = require('chinese-lunar');
-      const lunarInfo = chineseLunar.solarToLunar(currentDate);
-      console.log('🧪 lunarInfo:', JSON.stringify(lunarInfo, null, 2));
-
-      console.log('🌙 lunarInfo:', lunarInfo); // debug
-
-      const lunarMonth = lunarInfo?.month || 0;
-      const lunarDay = lunarInfo?.day || 0;
-
-
-      const lunarMonthName = getLunarMonthName(lunarMonth);
-      const lunarDayName = getLunarDayName(lunarDay);
-      const lunarDate = lunarMonthName && lunarDayName ? `${lunarMonthName}${lunarDayName}` : '未知日期';
-  
-      // 1️⃣ Confirm hours
-      await replyText(event.replyToken, `✅ 營業時間確認完成！\n${start} ~ ${end}`);
-  
-      // 2️⃣ Calculate prediction
-      const specialDayMap = require('./data/special_days_2025.json');
-      const { dayType, boostTomorrowHoliday, note } = analyzeDayType(currentDate, specialDayMap);
-      const profile = getDistrictProfile(city, districtOnly);
-
-      const specialDayList = getSpecialDayInfo(formatDate(currentDate), specialDayMap);
-      const hasSpecialDay = specialDayList.length > 0;
-
-  
-      const prediction = predictFootTraffic({
-        districtProfile: profile,
-        dayType,
-        weather,
-        start,
-        end,
-        boostTomorrowHoliday,
-        hasSpecialDay
-      });
-
-      
-
-      let specialDayText = '';
-
-      if (specialDayList.length > 0) {
-        // ✅ Format multiple items vertically
-        specialDayText = '🎯 特別日子：\n' + specialDayList.map(d => `・${d}`).join('\n');
-      } else {
-        const nextInfo = getNextSpecialDayInfo(formatDate(currentDate), specialDayMap);
-        const noDayPhrases = require('./data/no_special_day_phrases.json').no_special_day_phrases;
-      
-        let phrase = getRandomItem(noDayPhrases);
-      
-        // 避免與昨天相同
-        if (userState[userId]?.lastNoSpecialDayPhrase === phrase && noDayPhrases.length > 1) {
-          const alt = noDayPhrases.filter(p => p !== phrase);
-          phrase = getRandomItem(alt);
-        }
-      
-        userState[userId].lastNoSpecialDayPhrase = phrase;
-      
-        const countdownLine = nextInfo
-          ? `⏳ 下個特別日子是「${nextInfo.name}」，還有 ${nextInfo.daysUntil} 天`
-          : '📆 近期沒有特別日子。';
-      
-        specialDayText = `🎯 特別日子：\n${phrase}\n${countdownLine}`;
-      }
-      
-
-      const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
-      const dayOfWeek = dayNames[currentDate.getDay()];
-      const dateHeader = `📅 今天是 ${currentDate.getMonth() + 1}月${currentDate.getDate()}日（星期${dayOfWeek}）｜農曆${lunarDate}`;
-      const yiJi = getRandomYiJiPair();
-
-      const fullMessage = `${dateHeader}
-      ${specialDayText}
-      
-      ${formatWeatherBlock(districtOnly, weather)}
-      
-      📛 宜忌：
-      ✅ 宜：${yiJi.yi}
-      ❌ 忌：${yiJi.ji}
-      
-      🔥【人流預測】
-      🟡 等級：${prediction.level}(${prediction.suggestion.includes('悲觀') ? '還不錯，但別幻想暴富' : '隨緣出貨，隨便贏'}）
-      📦 建議：${prediction.suggestion}
-      
-      🧙‍♀️ 今日爛籤：
-      ${prediction.quote}`;
-        
-      await pushText(userId, fullMessage);
-      delete userState[userId];
-    } else {
-      await replyText(event.replyToken, '⚠️ 尚未設定完成營業時間或地區資料，請重新設定。');
-    }
+    await sendFinalPrediction(userId, event.replyToken);
   }
+  
   
   
 
@@ -653,10 +569,52 @@ async function getWeatherForecast(cityOnly, districtOnly) {
 
 
 function getDistrictProfile(city, district) {
-  const key = `${city}${district}`;
+  const normalizedCity = normalizeCityName(city);
+  const key = `${normalizedCity}${district}`.trim().replace(/\s+/g, '');
+  console.log('🔑 查詢區域屬性 Key:', key);
   return districtProfiles[key] || null;
 }
 
+
+async function replyConfirmIndustry(replyToken, industryText) {
+  const url = 'https://api.line.me/v2/bot/message/reply';
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`
+  };
+
+  const body = {
+    replyToken,
+    messages: [
+      {
+        type: 'text',
+        text: `✅ ${industryText}\n請確認或重新設定業種`,
+        quickReply: {
+          items: [
+            {
+              type: 'action',
+              action: {
+                type: 'message',
+                label: '✅ 確認',
+                text: '確認營業時間'
+              }
+            },
+            {
+              type: 'action',
+              action: {
+                type: 'message',
+                label: '🔄 重新設定',
+                text: '設定營業時間'
+              }
+            }
+          ]
+        }
+      }
+    ]
+  };
+
+  await axios.post(url, body, { headers });
+}
 
   
 async function replyConfirmTime(replyToken, start, end) {
@@ -897,6 +855,68 @@ function getDayTypeText(dayType) {
     case 'workday': return '平日 🥱';
     default: return '未知';
   }
+}
+
+async function sendFinalPrediction(userId, replyToken = null) {
+  const user = userState[userId];
+  if (!user || !user.start || !user.end || !user.city || !user.districtOnly || !user.weather) {
+    console.warn('❗ userState 資料不完整，無法送出預測');
+    return;
+  }
+
+  if (replyToken) {
+    await replyText(replyToken, `✅ 營業時間確認完成！\n${user.start} ~ ${user.end}`);
+  }
+
+  const currentDate = new Date();
+
+  const chineseLunar = require('chinese-lunar');
+  const lunarInfo = chineseLunar.solarToLunar(currentDate);
+  const lunarMonth = lunarInfo?.month || 0;
+  const lunarDay = lunarInfo?.day || 0;
+  const lunarDate = `${getLunarMonthName(lunarMonth)}${getLunarDayName(lunarDay)}`;
+
+  const specialDayMap = require('./data/special_days_2025.json');
+  const { dayType, boostTomorrowHoliday } = analyzeDayType(currentDate, specialDayMap);
+  const profile = getDistrictProfile(user.city, user.districtOnly);
+  const specialDayList = getSpecialDayInfo(formatDate(currentDate), specialDayMap);
+  const hasSpecialDay = specialDayList.length > 0;
+  const prediction = predictFootTraffic({
+    districtProfile: profile,
+    dayType,
+    weather: user.weather,
+    start: user.start,
+    end: user.end,
+    boostTomorrowHoliday,
+    hasSpecialDay
+  });
+
+  const specialDayText = specialDayList.length > 0
+    ? '🎯 特別日子：\n' + specialDayList.map(d => `・${d}`).join('\n')
+    : `🎯 特別日子：\n${getRandomItem(require('./data/no_special_day_phrases.json').no_special_day_phrases)}`;
+
+  const weatherBlock = formatWeatherBlock(user.districtOnly, user.weather);
+  const yiJi = getRandomYiJiPair();
+  const dateHeader = `📅 今天是 ${currentDate.getMonth() + 1}月${currentDate.getDate()}日（星期${['日','一','二','三','四','五','六'][currentDate.getDay()]})｜農曆${lunarDate}`;
+
+  const fullMessage = `${dateHeader}
+${specialDayText}
+
+${weatherBlock}
+
+📛 宜忌：
+✅ 宜：${yiJi.yi}
+❌ 忌：${yiJi.ji}
+
+🔥【人流預測】
+🟡 等級：${prediction.level}
+📦 建議：${prediction.suggestion}
+
+🧙‍♀️ 今日爛籤：
+${prediction.quote}`;
+
+  await pushText(userId, fullMessage);
+  delete userState[userId];
 }
 
 
