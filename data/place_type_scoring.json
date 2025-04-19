@@ -1,0 +1,47 @@
+{
+    "restaurant_cafe": {
+      "types": ["restaurant", "cafe", "bakery", "meal_takeaway"],
+      "scoring": [
+        { "min": 0, "max": 4, "score": 0 },
+        { "min": 5, "max": 9, "score": 1 },
+        { "min": 10, "max": 19, "score": 2 },
+        { "min": 20, "max": 29, "score": 3 },
+        { "min": 30, "max": 49, "score": 4 },
+        { "min": 50, "max": 9999, "score": 5 }
+      ]
+    },
+    "shops_malls": {
+      "types": ["department_store", "shopping_mall", "clothing_store", "convenience_store", "supermarket"],
+      "scoring": [
+        { "min": 0, "max": 2, "score": 0 },
+        { "min": 3, "max": 5, "score": 1 },
+        { "min": 6, "max": 9, "score": 2 },
+        { "min": 10, "max": 19, "score": 3 },
+        { "min": 20, "max": 29, "score": 4 },
+        { "min": 30, "max": 9999, "score": 5 }
+      ]
+    },
+    "offices": {
+      "types": ["real_estate_agency", "insurance_agency", "lawyer", "accounting", "bank", "atm", "travel_agency"],
+      "scoring": [
+        { "min": 0, "max": 4, "score": 0 },
+        { "min": 5, "max": 9, "score": 1 },
+        { "min": 10, "max": 14, "score": 2 },
+        { "min": 15, "max": 24, "score": 3 },
+        { "min": 25, "max": 34, "score": 4 },
+        { "min": 35, "max": 9999, "score": 5 }
+      ]
+    },
+    "tourist_spots": {
+      "types": ["tourist_attraction", "park", "museum", "art_gallery", "movie_theater", "zoo", "aquarium"],
+      "scoring": [
+        { "min": 0, "max": 0, "score": 0 },
+        { "min": 1, "max": 1, "score": 1 },
+        { "min": 2, "max": 2, "score": 2 },
+        { "min": 3, "max": 4, "score": 3 },
+        { "min": 5, "max": 6, "score": 4 },
+        { "min": 7, "max": 9999, "score": 5 }
+      ]
+    }
+  }
+  

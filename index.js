@@ -19,6 +19,8 @@ app.get('/myip', async (req, res) => {
 
 const port = process.env.PORT || 3000;
 const districtProfiles = require('./data/district_profiles.json');
+const placeTypeScoring = require('./data/place_type_scoring.json');
+
 const temperatureMessages = require('./data/temperature_messages.json');
 const yiJiPhrases = require('./data/yi_ji_phrases.json');
 
@@ -76,16 +78,32 @@ app.post('/webhook', express.json(), async (req, res) => {
       return;
     }
 
-    // ✅ Save to userState AFTER confirming weather is valid
+    // 🔍 執行周邊地點分析，取得分數
+    const {
+      foodScore,
+      shopScore,
+      serviceScore,
+      attractionScore,
+      totalNearby
+    } = await analyzeVicinity(latitude, longitude);
+
     userState[userId] = {
       ...userState[userId],
       location: { lat: latitude, lng: longitude },
       city: cityOnly,
       districtOnly,
-      weather    
+      weather,
+      vicinityScores: {
+        foodScore,
+        shopScore,
+        serviceScore,
+        attractionScore,
+        totalNearby
+      }
     };
-    
+
     console.log('🌤️ Saved weather data:', userState[userId].weather);
+    console.log('📊 周邊環境分析得分:', userState[userId].vicinityScores);
 
 
 
@@ -97,14 +115,13 @@ app.post('/webhook', express.json(), async (req, res) => {
     const profileText = profile && Array.isArray(profile.features)
       ? `🧭 地區屬性：${profile.type}\n📌 ${profile.features.join('\n📌 ')}`
       : '⚠️ 尚未收錄此區域的屬性資料';
+    const insightText = generateLocationInsightMessage(userState[userId].vicinityScores);
+
+    
 
 
-    await replyText(
-      event.replyToken,
-      `✅ 已收到您的位置！\n📍 您所在的城市是：${cityOnly}\n☀️ 白天：${weather.morning}\n🌆 下午：${weather.afternoon}\n🌙 晚上：${weather.night}\n\n${profileText}\n\n請繼續輸入「設定營業時間」`
-);
-
-      
+      const locationMessage = await generateLocationInsightMessage(userId, cityOnly, districtOnly, weather, latitude, longitude);
+      await replyText(event.replyToken, locationMessage);   
   }
   
 
@@ -591,6 +608,60 @@ function getDistrictProfile(city, district) {
   return districtProfiles[key] || null;
 }
 
+async function analyzeVicinity(lat, lng, radius = 500) {
+  const placeTypeScoring = require('./data/place_type_scoring.json');
+  const allPlaceTypes = Object.values(placeTypeScoring).flatMap(c => c.types);
+  const typeCounts = {};
+  let totalNearby = 0;
+
+  try {
+    const res = await googleClient.placesNearby({
+      params: {
+        location: { lat, lng },
+        radius,
+        type: 'point_of_interest',
+        key: process.env.GOOGLE_MAPS_API_KEY,
+        language: 'zh-TW'
+      }
+    });
+
+    const places = res.data.results || [];
+    totalNearby = places.length;
+
+    for (const place of places) {
+      for (const type of place.types || []) {
+        if (allPlaceTypes.includes(type)) {
+          typeCounts[type] = (typeCounts[type] || 0) + 1;
+        }
+      }
+    }
+
+    const getScore = (categoryKey) => {
+      const { types, scoring } = placeTypeScoring[categoryKey];
+      const total = types.reduce((sum, t) => sum + (typeCounts[t] || 0), 0);
+      const match = scoring.find(rule => total >= rule.min && total <= rule.max);
+      return match ? match.score : 0;
+    };
+
+    return {
+      foodScore: getScore('restaurant_cafe'),
+      shopScore: getScore('shops_malls'),
+      serviceScore: getScore('offices'),
+      attractionScore: getScore('tourist_spots'),
+      totalNearby
+    };
+  } catch (err) {
+    console.error('❗ analyzeVicinity 錯誤:', err.message);
+    return {
+      foodScore: 0,
+      shopScore: 0,
+      serviceScore: 0,
+      attractionScore: 0,
+      totalNearby: 0
+    };
+  }
+}
+
 
 async function replyConfirmIndustry(replyToken, industryText) {
   const url = 'https://api.line.me/v2/bot/message/reply';
@@ -781,7 +852,7 @@ function formatWeatherBlock(district, weather) {
 🌙 晚：${addWeatherEmoji(weather.night)}（${min}~${max}）`;
 }
 
-function predictFootTraffic({ districtProfile, dayType, weather, start, end, boostTomorrowHoliday, hasSpecialDay }) {
+function predictFootTraffic({ districtProfile, dayType, weather, start, end, boostTomorrowHoliday, hasSpecialDay, vicinityScores }) {
   const type = districtProfile?.type || '未知';
   const features = districtProfile?.features || [];
 
@@ -793,6 +864,17 @@ function predictFootTraffic({ districtProfile, dayType, weather, start, end, boo
   if (type.includes('地方生活型')) score += 1;
   if (type.includes('傳統商圈')) score += 1;
   if (type.includes('學區')) score += (dayType === 'workday' ? 1 : -1);
+
+  // 🗺️ [1.5] Google 地點類型聚集度得分
+  if (vicinityScores) {
+    const { restaurant_cafe, shops_malls, offices, tourist_spots } = vicinityScores;
+
+    if (typeof restaurant_cafe === 'number') score += restaurant_cafe;
+    if (typeof shops_malls === 'number') score += shops_malls;
+    if (typeof offices === 'number') score += offices;
+    if (typeof tourist_spots === 'number') score += tourist_spots;
+  }
+
 
   // 🌦️ [2] 天氣扣分（最多 -3）
   const badWeatherCount = [weather.morning, weather.afternoon, weather.night]
@@ -862,6 +944,30 @@ function getTemperatureCommentByRange(min, max) {
   return list.length > 0 ? list[Math.floor(Math.random() * list.length)] : '靠毅力撐場';
 }
 
+function generateLocationInsightMessage(vicinityScores) {
+  const { foodScore, shopScore, serviceScore, attractionScore, totalNearby } = vicinityScores;
+
+  const scoreEmoji = (score) => {
+    if (score >= 5) return '🌟';
+    if (score >= 4) return '🔥';
+    if (score >= 3) return '👍';
+    if (score >= 2) return '👌';
+    if (score >= 1) return '🟡';
+    return '⚪';
+  };
+
+  const parts = [
+    `🍱 餐飲聚集度：${scoreEmoji(foodScore)}（${foodScore} 分）`,
+    `🛍 商業設施密度：${scoreEmoji(shopScore)}（${shopScore} 分）`,
+    `🧑‍💼 辦公聚集程度：${scoreEmoji(serviceScore)}（${serviceScore} 分）`,
+    `🎡 觀光潛力：${scoreEmoji(attractionScore)}（${attractionScore} 分）`,
+    '',
+    `🧲 整體熱區評估：${scoreEmoji(Math.round((foodScore + shopScore + serviceScore + attractionScore) / 4))}（來自 ${totalNearby} 筆地點分析）`
+  ];
+
+  return parts.join('\n');
+}
+
 
 function getDayTypeText(dayType) {
   switch (dayType) {
@@ -871,6 +977,39 @@ function getDayTypeText(dayType) {
     case 'workday': return '平日 🥱';
     default: return '未知';
   }
+}
+
+async function generateLocationInsightMessage(userId, cityOnly, districtOnly, weather, lat, lng) {
+  const profile = getDistrictProfile(cityOnly, districtOnly);
+  const profileText = profile && Array.isArray(profile.features)
+    ? `📍 區域屬性：${profile.type}\n🔸 ${profile.features.join('\n🔸 ')}`
+    : '📍 此區域尚未有完整分類資料';
+
+  // 🧠 Get place type clustering logic (use your existing logic or expand)
+  const { foodScore, shopScore, serviceScore, attractionScore, totalNearby } = await analyzeVicinity(lat, lng);
+
+  const scores = [
+    `🍱 餐飲密度：${foodScore}`,
+    `🛍 商店密度：${shopScore}`,
+    `🧰 服務密度：${serviceScore}`,
+    `🧲 景點密度：${attractionScore}`,
+    `📌 周邊熱點數：${totalNearby}`
+  ].join('\n');
+
+  return `✅ 已收到您的位置！
+
+🌇 地區：${cityOnly}${districtOnly}
+⛅ 今日天氣：
+🌞 早：${addWeatherEmoji(weather.morning)}（${weather.minTemp}°C ~ ${weather.maxTemp}°C）
+🌆 午：${addWeatherEmoji(weather.afternoon)}
+🌙 晚：${addWeatherEmoji(weather.night)}
+
+${profileText}
+
+📊 周邊環境分析：
+${scores}
+
+請繼續輸入「設定營業時間」`;
 }
 
 async function sendFinalPrediction(userId, replyToken = null) {
