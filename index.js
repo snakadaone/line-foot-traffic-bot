@@ -634,12 +634,17 @@ async function analyzeVicinity(lat, lng, radius = 500) {
     totalNearby = places.length;
 
     for (const place of places) {
+      console.log('🏷️ Place types:', place.types); // <-- Added
+    
       for (const type of place.types || []) {
         if (allPlaceTypes.includes(type)) {
           typeCounts[type] = (typeCounts[type] || 0) + 1;
         }
       }
     }
+    
+    console.log('📦 Counted types:', typeCounts); // <-- Added
+    
 
     const getScore = (categoryKey) => {
       const { types, scoring } = placeTypeScoring[categoryKey];
@@ -1003,7 +1008,7 @@ async function generateLocationInsightMessage(userId, cityOnly, districtOnly, we
 
   return `✅ 已收到您的位置！
 
-🌇 地區：${cityOnly}${districtOnly}
+🌇 地區：${districtOnly}
 ⛅ 今日天氣：
 🌞 早：${addWeatherEmoji(weather.morning)}（${weather.minTemp}°C ~ ${weather.maxTemp}°C）
 🌆 午：${addWeatherEmoji(weather.afternoon)}
