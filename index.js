@@ -94,10 +94,10 @@ app.post('/webhook', express.json(), async (req, res) => {
       districtOnly,
       weather,
       vicinityScores: {
-        foodScore,
-        shopScore,
-        serviceScore,
-        attractionScore,
+        restaurant_cafe: foodScore,
+        shops_malls: shopScore,
+        offices: serviceScore,
+        tourist_spots: attractionScore,
         totalNearby
       }
     };
@@ -120,8 +120,19 @@ app.post('/webhook', express.json(), async (req, res) => {
     
 
 
-      const locationMessage = await generateLocationInsightMessage(userId, cityOnly, districtOnly, weather, latitude, longitude);
-      await replyText(event.replyToken, locationMessage);   
+      // ✅ Save to userState properly before sending insight
+      userState[userId] = {
+      ...userState[userId],
+      location: { lat: latitude, lng: longitude },
+      city: cityOnly,
+      districtOnly,
+      weather,
+      step: 'location_saved'
+    };
+
+    const locationMessage = await generateLocationInsightMessage(userId, cityOnly, districtOnly, weather, latitude, longitude);
+    await replyText(event.replyToken, locationMessage);
+   
   }
   
 
