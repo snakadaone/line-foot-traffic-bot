@@ -408,8 +408,13 @@ async function sendTimeQuickReply(replyToken, promptText, step = 'start', range 
     }
 }
 function normalizeCityName(name) {
-  return name.replace(/^台/, '臺'); // 把台北市改成臺北市
+  if (typeof name !== 'string') {
+    console.warn('⚠️ normalizeCityName 接收到無效輸入：', name);
+    return '';
+  }
+  return name.replace(/^台/, '臺');
 }
+
 
 const cityToDatasetId = {
   '基隆市': 'F-D0047-049',
