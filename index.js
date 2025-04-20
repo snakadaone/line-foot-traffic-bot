@@ -120,18 +120,25 @@ app.post('/webhook', express.json(), async (req, res) => {
     
 
 
-      // ✅ Save to userState properly before sending insight
-      userState[userId] = {
+    userState[userId] = {
       ...userState[userId],
       location: { lat: latitude, lng: longitude },
       city: cityOnly,
       districtOnly,
       weather,
+      vicinityScores: {
+        restaurant_cafe: foodScore,
+        shops_malls: shopScore,
+        offices: serviceScore,
+        tourist_spots: attractionScore,
+        totalNearby
+      },
       step: 'location_saved'
     };
-
-    const locationMessage = await generateLocationInsightMessage(userId, cityOnly, districtOnly, weather, latitude, longitude);
+    
+    const locationMessage = await generateLocationInsightMessage(userId, districtOnly, weather, latitude, longitude);
     await replyText(event.replyToken, locationMessage);
+    
    
   }
   
@@ -645,17 +652,14 @@ async function analyzeVicinity(lat, lng, radius = 500) {
     totalNearby = places.length;
 
     for (const place of places) {
-      console.log('🏷️ Place types:', place.types); // <-- Added
-    
       for (const type of place.types || []) {
         if (allPlaceTypes.includes(type)) {
           typeCounts[type] = (typeCounts[type] || 0) + 1;
         }
       }
     }
-    
-    console.log('📦 Counted types:', typeCounts); // <-- Added
-    
+
+    console.log('📦 Counted all matching types:', JSON.stringify(typeCounts, null, 2));
 
     const getScore = (categoryKey) => {
       const { types, scoring } = placeTypeScoring[categoryKey];
@@ -664,11 +668,22 @@ async function analyzeVicinity(lat, lng, radius = 500) {
       return match ? match.score : 0;
     };
 
+    const foodScore = getScore('restaurant_cafe');
+    const shopScore = getScore('shops_malls');
+    const serviceScore = getScore('offices');
+    const attractionScore = getScore('tourist_spots');
+
+    console.log('📊 類別得分:');
+    console.log('🍜 餐飲:', foodScore);
+    console.log('🛍 商業:', shopScore);
+    console.log('💼 辦公:', serviceScore);
+    console.log('🎡 觀光:', attractionScore);
+
     return {
-      foodScore: getScore('restaurant_cafe'),
-      shopScore: getScore('shops_malls'),
-      serviceScore: getScore('offices'),
-      attractionScore: getScore('tourist_spots'),
+      foodScore,
+      shopScore,
+      serviceScore,
+      attractionScore,
       totalNearby
     };
   } catch (err) {
@@ -681,6 +696,7 @@ async function analyzeVicinity(lat, lng, radius = 500) {
       totalNearby: 0
     };
   }
+
 }
 
 
@@ -1000,7 +1016,7 @@ function getDayTypeText(dayType) {
   }
 }
 
-async function generateLocationInsightMessage(userId, cityOnly, districtOnly, weather, lat, lng) {
+async function generateLocationInsightMessage(userId, districtOnly, weather, lat, lng) {
   const profile = getDistrictProfile(cityOnly, districtOnly);
   const profileText = profile && Array.isArray(profile.features)
     ? `📍 區域屬性：${profile.type}\n🔸 ${profile.features.join('\n🔸 ')}`
