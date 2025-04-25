@@ -115,7 +115,15 @@ app.post('/webhook', express.json(), async (req, res) => {
     const profileText = profile && Array.isArray(profile.features)
       ? `🧭 地區屬性：${profile.type}\n📌 ${profile.features.join('\n📌 ')}`
       : '⚠️ 尚未收錄此區域的屬性資料';
-    const insightText = generateLocationInsightMessage(userState[userId].vicinityScores);
+    const insightText = await generateLocationInsightMessage(
+      userId,
+      cityOnly,
+      districtOnly,
+      weather,
+      latitude,
+      longitude
+    );
+    await replyText(event.replyToken, insightText);
 
     
 
@@ -136,10 +144,6 @@ app.post('/webhook', express.json(), async (req, res) => {
       step: 'location_saved'
     };
     
-    const locationMessage = await generateLocationInsightMessage(userId, districtOnly, weather, latitude, longitude);
-    await replyText(event.replyToken, locationMessage);
-    
-   
   }
   
 
