@@ -1020,7 +1020,7 @@ function getDayTypeText(dayType) {
   }
 }
 
-async function generateLocationInsightMessage(userId, districtOnly, weather, lat, lng) {
+async function generateLocationInsightMessage(userId, cityOnly, districtOnly, weather, lat, lng) {
   const profile = getDistrictProfile(cityOnly, districtOnly);
   const profileText = profile && Array.isArray(profile.features)
     ? `📍 區域屬性：${profile.type}\n🔸 ${profile.features.join('\n🔸 ')}`
