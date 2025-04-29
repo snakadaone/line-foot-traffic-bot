@@ -121,7 +121,9 @@ app.post('/webhook', express.json(), async (req, res) => {
       districtOnly,
       weather,
       latitude,
-      longitude
+      longitude,
+      userState[userId].vicinityScores,
+      profile
     );
     await replyText(event.replyToken, insightText);
 
@@ -985,55 +987,18 @@ function getTemperatureCommentByRange(min, max) {
   return list.length > 0 ? list[Math.floor(Math.random() * list.length)] : '靠毅力撐場';
 }
 
-function generateLocationInsightMessage(vicinityScores) {
-  const { foodScore, shopScore, serviceScore, attractionScore, totalNearby } = vicinityScores;
+function generateLocationInsightMessage(vicinityScores, districtProfile, weather, districtOnly) {
+  const { restaurant_cafe, shops_malls, offices, tourist_spots, totalNearby } = vicinityScores;
 
-  const scoreEmoji = (score) => {
-    if (score >= 5) return '🌟';
-    if (score >= 4) return '🔥';
-    if (score >= 3) return '👍';
-    if (score >= 2) return '👌';
-    if (score >= 1) return '🟡';
-    return '⚪';
-  };
-
-  const parts = [
-    `🍱 餐飲聚集度：${scoreEmoji(foodScore)}（${foodScore} 分）`,
-    `🛍 商業設施密度：${scoreEmoji(shopScore)}（${shopScore} 分）`,
-    `🧑‍💼 辦公聚集程度：${scoreEmoji(serviceScore)}（${serviceScore} 分）`,
-    `🎡 觀光潛力：${scoreEmoji(attractionScore)}（${attractionScore} 分）`,
-    '',
-    `🧲 整體熱區評估：${scoreEmoji(Math.round((foodScore + shopScore + serviceScore + attractionScore) / 4))}（來自 ${totalNearby} 筆地點分析）`
-  ];
-
-  return parts.join('\n');
-}
-
-
-function getDayTypeText(dayType) {
-  switch (dayType) {
-    case 'holiday': return '國定假日 🛋️';
-    case 'weekend': return '週末 🤙';
-    case 'makeupWorkday': return '補班日 🧨';
-    case 'workday': return '平日 🥱';
-    default: return '未知';
-  }
-}
-
-async function generateLocationInsightMessage(userId, cityOnly, districtOnly, weather, lat, lng) {
-  const profile = getDistrictProfile(cityOnly, districtOnly);
-  const profileText = profile && Array.isArray(profile.features)
-    ? `📍 區域屬性：${profile.type}\n🔸 ${profile.features.join('\n🔸 ')}`
+  const profileText = districtProfile && Array.isArray(districtProfile.features)
+    ? `📍 區域屬性：${districtProfile.type}\n🔸 ${districtProfile.features.join('\n🔸 ')}`
     : '📍 此區域尚未有完整分類資料';
 
-  // 🧠 Get place type clustering logic (use your existing logic or expand)
-  const { foodScore, shopScore, serviceScore, attractionScore, totalNearby } = await analyzeVicinity(lat, lng);
-
   const scores = [
-    `🍱 餐飲密度：${foodScore}`,
-    `🛍 商店密度：${shopScore}`,
-    `🧰 服務密度：${serviceScore}`,
-    `🧲 景點密度：${attractionScore}`,
+    `🍱 餐飲密度：${restaurant_cafe}`,
+    `🛍 商店密度：${shops_malls}`,
+    `🧰 服務密度：${offices}`,
+    `🧲 景點密度：${tourist_spots}`,
     `📌 周邊熱點數：${totalNearby}`
   ].join('\n');
 
@@ -1052,6 +1017,19 @@ ${scores}
 
 請繼續輸入「設定營業時間」`;
 }
+
+
+
+function getDayTypeText(dayType) {
+  switch (dayType) {
+    case 'holiday': return '國定假日 🛋️';
+    case 'weekend': return '週末 🤙';
+    case 'makeupWorkday': return '補班日 🧨';
+    case 'workday': return '平日 🥱';
+    default: return '未知';
+  }
+}
+
 
 async function sendFinalPrediction(userId, replyToken = null) {
   const user = userState[userId];
